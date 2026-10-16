@@ -98,37 +98,52 @@ def generate():
         if not pattern_data:
             return jsonify({'error': 'No pattern data provided. Run analysis first.'}), 400
         
-        # Generate pattern text
+        # Generate pattern text (Chinese document)
         engine = BeginnerPatternGenerator()
-        full_pattern = engine.add_header()
-        full_pattern += f"## {pattern_name.replace('_', ' ').upper()}\n\n"
-        full_pattern += engine.generate_materials(pattern_data)
-        
         try:
-            for part in pattern_data:
-                full_pattern += engine.generate_part(part)
+            full_pattern = engine.build_document(pattern_data, pattern_name, lang="zh")
         except KeyError as ke:
-            part_name = part.get('name', 'unknown')
-            print("[GENERATE] Missing key:", ke, "for part:", part)
+            print("[GENERATE] Missing key:", ke)
             traceback.print_exc()
             return jsonify({
-                'error': f'Pattern data incomplete: missing "{ke}" for part "{part_name}". Try a simpler image or description.'
+                'error': f'Pattern data incomplete: missing "{ke}". Try a simpler image or description.'
             }), 400
-        
-        # Add assembly instructions based on part positions
-        full_pattern += engine.generate_assembly(pattern_data)
 
         # Convert markdown to HTML for preview
         html_pattern = markdown_to_html(full_pattern)
-        
-        # Generate PDF
+
+        # Optional finished-product preview image (local ComfyUI)
+        image_path = None
+        image_url = None
+        creature_type = data.get('creature_type') or ''
+        if data.get('generate_image', True):
+            try:
+                import image_generator
+                if image_generator.available():
+                    prompt = image_generator.build_product_prompt(
+                        pattern_data, creature_type or pattern_name)
+                    img_name = f"{secure_filename(pattern_name)}_preview.png"
+                    image_path = os.path.join('generated_patterns', img_name)
+                    print("[GENERATE] image prompt:", prompt)
+                    if image_generator.generate(prompt, image_path):
+                        image_url = f'/preview/{img_name}'
+                    else:
+                        image_path = None
+                else:
+                    print("[GENERATE] ComfyUI not reachable; skipping preview image")
+            except Exception as exc:
+                print("[GENERATE] preview image skipped:", exc)
+                image_path = None
+
+        # Generate PDF (with the preview image embedded when available)
         pdf_filename = f"{pattern_name}_Pattern.pdf"
         pdf_path = os.path.join('generated_patterns', pdf_filename)
-        engine.save_to_pdf(pdf_path, full_pattern)
-        
+        engine.save_to_pdf(pdf_path, full_pattern, image_path=image_path)
+
         return jsonify({
             'preview': html_pattern,
-            'pdf_url': f'/download/{pdf_filename}'
+            'pdf_url': f'/download/{pdf_filename}',
+            'image_url': image_url,
         })
     
     except Exception as e:
@@ -142,6 +157,15 @@ def download(filename):
     try:
         pdf_path = os.path.join('generated_patterns', filename)
         return send_file(pdf_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
+
+@app.route('/preview/<filename>')
+def preview_image(filename):
+    """Serve a generated finished-product preview image inline."""
+    try:
+        img_path = os.path.join('generated_patterns', filename)
+        return send_file(img_path, mimetype='image/png')
     except Exception as e:
         return jsonify({'error': str(e)}), 404
 

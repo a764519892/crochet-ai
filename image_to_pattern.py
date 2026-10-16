@@ -14,6 +14,7 @@ Examples:
 """
 
 import sys
+import os
 import traceback
 from pathlib import Path
 
@@ -29,17 +30,9 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 
-def build_pattern_text(engine, pattern_data, title):
+def build_pattern_text(engine, pattern_data, title, lang=None):
     """Assemble the full pattern document the same way the web app does."""
-    text = engine.add_header()
-    text += f"## {title.replace('_', ' ').upper()}\n\n"
-    text += engine.generate_materials(pattern_data)
-
-    for part in pattern_data:
-        text += engine.generate_part(part)
-
-    text += engine.generate_assembly(pattern_data)
-    return text
+    return engine.build_document(pattern_data, title, lang=lang or os.environ.get("CROCHET_LANG", "zh"))
 
 
 def generate_pattern_from_image(image_path, output_name=None, notes=None):
@@ -59,7 +52,7 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
     print("=" * 60)
 
     # ── Step 1: Analyze the image with the local vision model ──
-    print("\n[1/3] Analyzing image with AI (two passes)...")
+    print("\n[1/4] Analyzing image with AI (two passes)...")
     analyzer = VisionAnalyzer()
 
     try:
@@ -84,7 +77,7 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
         print(f"    - {part['name']} ({part['type']}) - {part.get('color', 'Unknown')}")
 
     # ── Step 2: Generate the pattern text (materials + parts + assembly) ──
-    print("\n[2/3] Writing materials, rounds, and assembly...")
+    print("\n[2/4] Writing materials, rounds, and assembly...")
     engine = BeginnerPatternGenerator()
 
     if output_name is None:
@@ -97,10 +90,32 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
         print("        Try a simpler image or clearer notes.")
         raise SystemExit(1)
 
-    # ── Step 3: Save to PDF ──
-    print("\n[3/3] Generating PDF...")
+    # ── Step 3: Render a finished-product preview image (local ComfyUI) ──
+    image_path_out = None
+    if os.environ.get("CROCHET_NO_IMAGE"):
+        print("\n[3/4] Skipping preview image (CROCHET_NO_IMAGE set).")
+    else:
+        print("\n[3/4] Rendering finished-product preview image (ComfyUI)...")
+        try:
+            import image_generator
+            if image_generator.available():
+                prompt = image_generator.build_product_prompt(pattern_data, creature_type)
+                print(f"      prompt: {prompt[:120]}...")
+                image_path_out = f"{output_name}_preview.png"
+                if not image_generator.generate(prompt, image_path_out):
+                    image_path_out = None
+                    print("      (image generation failed; continuing without it)")
+            else:
+                print("      ComfyUI not reachable at "
+                      f"{image_generator.COMFY_URL} - skipping (start it, or set COMFYUI_URL).")
+        except Exception as exc:
+            print(f"      image generator unavailable ({exc}); continuing without an image.")
+            image_path_out = None
+
+    # ── Step 4: Save to PDF ──
+    print("\n[4/4] Generating PDF...")
     pdf_filename = f"{output_name}_Pattern.pdf"
-    engine.save_to_pdf(pdf_filename, full_pattern)
+    engine.save_to_pdf(pdf_filename, full_pattern, image_path=image_path_out)
 
     pdf_path = Path(pdf_filename).resolve()
     print("\n" + "=" * 60)

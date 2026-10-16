@@ -11,8 +11,12 @@ The generator itself is not hosted. Clone this repo and run it on your machine.
 - Image and/or text in
 - Review UI so you can edit detected parts before writing
 - Eight+ shape families (sphere, cylinder, cone, leaves, wings, petals, spikes, …)
-- Beginner PDF with US terms, stitch counts, and assembly
+- Beginner PDF with **Chinese** terms (short/inc/dec, round counts) and assembly
+- **Finished-product preview image** (optional, rendered locally with ComfyUI + FLUX)
 - CLI for batch use
+
+The pattern document is Chinese by default (`zh`). Set `CROCHET_LANG=en` for the original
+English wording.
 
 ## Quick start
 
@@ -68,6 +72,39 @@ python3 image_to_pattern.py path/to/image.jpg "Cute Dragon" "blue dragon, ignore
 Writes `<Name>_Pattern.pdf` next to where you run it. Needs the same local model as the web app
 (`ollama serve` running and `llava` installed).
 
+### 5. Finished-product image (optional — needs ComfyUI)
+
+Besides the text pattern, the app can render a **what-it-will-look-like photo** of the
+finished amigurumi and drop it into the PDF. This uses a local **ComfyUI** server (FLUX.1-dev);
+there is no cloud call. If ComfyUI is not running the step is simply skipped.
+
+Start ComfyUI (the portable build works well), then run the app normally:
+
+```bash
+# in the ComfyUI portable folder (low-VRAM cards need --lowvram)
+python_embeded\python.exe -s ComfyUI\main.py --lowvram --disable-dynamic-vram --disable-all-custom-nodes
+```
+
+Relevant settings (all optional, environment variables):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUI server |
+| `COMFY_SIZE` | `768` | square render size (lower = less VRAM, e.g. `512`) |
+| `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | model files |
+| `CROCHET_NO_IMAGE` | unset | set to `1` to skip image generation entirely |
+
+In the web UI there is a checkbox next to **Generate pattern**. On the CLI the image is
+produced automatically; `<Name>_preview.png` appears next to the PDF.
+
+### 6. Chinese pattern output
+
+`pattern_engine.BeginnerPatternGenerator(lang="zh")` builds the document in Chinese;
+`pattern_i18n.py` does the translation (part names, colours, positions, stitches, tips,
+assembly). The PDF embeds a CJK font automatically — override the font path with
+`CROCHET_CJK_FONT` (defaults to `C:\Windows\Fonts\simhei.ttf` on Windows, Noto/WenQuanYi on
+Linux, PingFang on macOS).
+
 ## How it is put together
 
 ```
@@ -93,6 +130,8 @@ Shape notes: [SHAPE_TYPES.md](SHAPE_TYPES.md)
 ```
 app.py                 Flask app (localhost:5001)
 pattern_engine.py      Round-by-round writing
+pattern_i18n.py        English -> Chinese translation of the document
+image_generator.py     Finished-product image via local ComfyUI (FLUX)
 vision_analyzer.py     Ollama vision
 image_to_pattern.py    CLI
 templates/index.html   Desk UI

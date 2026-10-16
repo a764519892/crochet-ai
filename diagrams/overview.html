@@ -87,15 +87,16 @@
 </head>
 <body>
 
-  <div class="kicker">Local AI · No cloud · PDF out</div>
+  <div class="kicker">本机 AI · 不联网 · 输出 PDF + 成品效果图</div>
   <h1>🧶 Crochet AI — 项目运行图解</h1>
-  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（美式术语 + 圈数 + 针数 + 组装说明），最后导出 PDF。全部在本机运行，不调用任何云端 API。</p>
+  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（中文术语 + 圈数 + 针数 + 组装说明），导出 PDF；并用本机 ComfyUI（FLUX）额外渲染一张<b>成品效果图</b>，一并放进 PDF。全程在本机运行，不调用任何云端 API。</p>
 
   <div class="flow-line">
     <span class="node">照片 / 文字</span><span class="arrow">→</span>
     <span class="node">本地视觉模型识别部件</span><span class="arrow">→</span>
     <span class="node">网页复核并修改</span><span class="arrow">→</span>
-    <span class="node">图案引擎写圈数/针数</span><span class="arrow">→</span>
+    <span class="node">图案引擎写中文圈数/针数</span><span class="arrow">→</span>
+    <span class="node">ComfyUI 渲染成品效果图</span><span class="arrow">→</span>
     <span class="node">PDF 下载</span>
   </div>
 
@@ -131,11 +132,21 @@
         </div>
       </div>
       <div class="layer">
+        <div class="tag t-ai">图像<br>生成</div>
+        <div class="body">
+          <div class="chip"><b>image_generator.py</b><span>生成成品效果图</span></div>
+          <div class="chip"><b>FLUX.1-dev (fp8)</b><span>本机 ComfyUI 文生图</span></div>
+          <div class="chip"><b>ComfyUI API</b><span>127.0.0.1:8188（--lowvram）</span></div>
+          <div class="chip"><b>嵌入 PDF</b><span>成品效果图放在图解开头</span></div>
+        </div>
+      </div>
+      <div class="layer">
         <div class="tag t-eng">图案<br>引擎</div>
         <div class="body">
           <div class="chip"><b>pattern_engine.py</b><span>class BeginnerPatternGenerator</span></div>
+          <div class="chip"><b>pattern_i18n.py</b><span>把英文图解翻成中文</span></div>
           <div class="chip"><b>形状生成器</b><span>球/椭圆/圆柱/圆锥…逐个生成圈数</span></div>
-          <div class="chip"><b>fpdf2</b><span>把图解排版成 PDF</span></div>
+          <div class="chip"><b>fpdf2 + SimHei</b><span>中文排版成 PDF（需嵌入中文字体）</span></div>
         </div>
       </div>
       <div class="layer">
@@ -175,8 +186,14 @@
       </div>
       <div class="conn">→</div>
       <div class="pstep">
-        <div class="num">STEP 5</div><h4>输出</h4>
-        <p>右侧实时预览，fpdf2 写成 PDF，点按钮下载。</p>
+        <div class="num">STEP 5</div><h4>渲染成品效果图</h4>
+        <p>image_generator 把部件整理成提示词，交给本机 ComfyUI 用 FLUX 画一张成品图（可关闭）。</p>
+        <p><code>POST 127.0.0.1:8188/prompt</code></p>
+      </div>
+      <div class="conn">→</div>
+      <div class="pstep">
+        <div class="num">STEP 6</div><h4>输出</h4>
+        <p>右侧实时预览（成品图 + 中文图解），fpdf2 写成 PDF，点按钮下载。</p>
         <p><code>generated_patterns/*.pdf</code></p>
       </div>
     </div>
@@ -209,21 +226,21 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
   <section>
     <h2><span class="n">04</span>图案引擎支持的 15 种形状</h2>
     <div class="shapes">
-      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="13" fill="#d99a3a"/></svg><b>sphere</b><span>球：头/身/眼</span></div>
-      <div class="shape"><svg width="34" height="34"><ellipse cx="17" cy="17" rx="11" ry="14" fill="#c2624a"/></svg><b>oval</b><span>椭圆：鸟身</span></div>
-      <div class="shape"><svg width="34" height="34"><rect x="10" y="4" width="14" height="26" rx="7" fill="#7d9080"/></svg><b>cylinder</b><span>圆柱：腿/臂</span></div>
-      <div class="shape"><svg width="34" height="34"><polygon points="17,3 30,31 4,31" fill="#5b7fa6"/></svg><b>cone</b><span>圆锥：耳/角</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M4 30 A13 13 0 0 1 30 30 Z" fill="#8a6fa8"/></svg><b>dome</b><span>半球：帽/壳</span></div>
-      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="#c98a9b"/></svg><b>flat_circle</b><span>圆片：耳/垫</span></div>
-      <div class="shape"><svg width="34" height="34"><rect x="5" y="11" width="24" height="12" rx="3" fill="#7d9080"/></svg><b>flat_leaf</b><span>扁片：叶/巾</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M12 3 L22 3 L19 31 L15 31 Z" fill="#d99a3a"/></svg><b>tapered_tube</b><span>渐细管：尾</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M17 31 A16 16 0 0 1 24 5 L17 31 Z" fill="#5b7fa6"/></svg><b>fan</b><span>扇形：鱼尾</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M6 8 L14 22 M14 22 L14 30 M14 22 L6 30 M14 22 L22 30" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/></svg><b>bird_feet</b><span>鸟爪</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M17 31 C2 20 8 4 17 10 C26 4 32 20 17 31 Z" fill="#7d9080"/></svg><b>heart_leaf</b><span>心形叶</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M4 30 L10 8 L17 22 L24 6 L30 30 Z" fill="#8a6fa8"/></svg><b>wing</b><span>锯齿翼</span></div>
-      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="19" r="8" fill="#c2624a"/><circle cx="17" cy="4" r="4" fill="#d99a3a"/><circle cx="33" cy="14" r="4" fill="#d99a3a" transform="translate(-31,0)"/><circle cx="4" cy="14" r="4" fill="#d99a3a" transform="translate(3,0)"/></svg><b>petals</b><span>花瓣</span></div>
-      <div class="shape"><svg width="34" height="34"><path d="M5 30 L12 12 L19 30 L26 14 L30 30 Z" fill="#5b7fa6"/></svg><b>spikes</b><span>尖刺</span></div>
-      <div class="shape"><svg width="34" height="34"><circle cx="12" cy="20" r="7" fill="#c98a9b"/><circle cx="24" cy="13" r="6" fill="#c2624a"/></svg><b>bobble</b><span>凸点：蛙眼</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="13" fill="#d99a3a"/></svg><b>球体</b><span>sphere · 头/身/眼</span></div>
+      <div class="shape"><svg width="34" height="34"><ellipse cx="17" cy="17" rx="11" ry="14" fill="#c2624a"/></svg><b>椭圆</b><span>oval · 鸟身</span></div>
+      <div class="shape"><svg width="34" height="34"><rect x="10" y="4" width="14" height="26" rx="7" fill="#7d9080"/></svg><b>圆柱</b><span>cylinder · 腿/臂</span></div>
+      <div class="shape"><svg width="34" height="34"><polygon points="17,3 30,31 4,31" fill="#5b7fa6"/></svg><b>圆锥</b><span>cone · 耳/角</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M4 30 A13 13 0 0 1 30 30 Z" fill="#8a6fa8"/></svg><b>半球</b><span>dome · 帽/壳</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="#c98a9b"/></svg><b>圆片</b><span>flat_circle · 耳/垫</span></div>
+      <div class="shape"><svg width="34" height="34"><rect x="5" y="11" width="24" height="12" rx="3" fill="#7d9080"/></svg><b>扁片</b><span>flat_leaf · 叶/巾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M12 3 L22 3 L19 31 L15 31 Z" fill="#d99a3a"/></svg><b>渐细管</b><span>tapered_tube · 尾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M17 31 A16 16 0 0 1 24 5 L17 31 Z" fill="#5b7fa6"/></svg><b>扇形</b><span>fan · 鱼尾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M6 8 L14 22 M14 22 L14 30 M14 22 L6 30 M14 22 L22 30" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/></svg><b>鸟爪</b><span>bird_feet</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M17 31 C2 20 8 4 17 10 C26 4 32 20 17 31 Z" fill="#7d9080"/></svg><b>心形叶</b><span>heart_leaf</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M4 30 L10 8 L17 22 L24 6 L30 30 Z" fill="#8a6fa8"/></svg><b>锯齿翼</b><span>wing</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="19" r="8" fill="#c2624a"/><circle cx="17" cy="4" r="4" fill="#d99a3a"/><circle cx="33" cy="14" r="4" fill="#d99a3a" transform="translate(-31,0)"/><circle cx="4" cy="14" r="4" fill="#d99a3a" transform="translate(3,0)"/></svg><b>花瓣</b><span>petals</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M5 30 L12 12 L19 30 L26 14 L30 30 Z" fill="#5b7fa6"/></svg><b>尖刺</b><span>spikes</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="12" cy="20" r="7" fill="#c98a9b"/><circle cx="24" cy="13" r="6" fill="#c2624a"/></svg><b>凸点</b><span>bobble · 蛙眼</span></div>
     </div>
   </section>
 
@@ -233,12 +250,27 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
     <div class="checks">
       <div class="check"><span class="dot ok"></span>Python 运行环境<span class="v">3.14.6 ✔</span></div>
       <div class="check"><span class="dot ok"></span>Ollama 服务已启动<span class="v">v0.40.4 · 11434 ✔</span></div>
-      <div class="check"><span class="dot ok"></span>pip 安装依赖（fpdf2/flask/ollama）<span class="v">✔</span></div>
+      <div class="check"><span class="dot ok"></span>视觉模型 llava（识别照片）<span class="v">已安装 4.7GB ✔</span></div>
       <div class="check"><span class="dot ok"></span>Flask 网页服务<span class="v">HTTP 200 ✔</span></div>
-      <div class="check"><span class="dot ok"></span>生成图解 + PDF（不走 AI）<span class="v">✔ 已产出 3.7KB PDF</span></div>
-      <div class="check"><span class="dot bad"></span>视觉模型 llava（识别照片必需）<span class="v">未安装 ✘</span></div>
+      <div class="check"><span class="dot ok"></span>中文图解 + PDF（嵌入 SimHei）<span class="v">✔</span></div>
+      <div class="check"><span class="dot ok"></span>ComfyUI + FLUX.1-dev(fp8)<span class="v">8188 · LOW_VRAM ✔</span></div>
+      <div class="check"><span class="dot ok"></span>单元自测 test_patterns.py<span class="v">4 passed / 0 failed ✔</span></div>
+      <div class="check"><span class="dot ok"></span>15 种形状中文图解全量验证<span class="v">✔ 无漏译</span></div>
     </div>
-    <p class="note" style="margin-top:10px;">结论：除“视觉识别照片”外均可运行。要使 <b>Analyze</b> 生效，需 <b>ollama pull llava</b>；或改用本机已装的视觉模型 <b>huihui_ai/qwen3.5-abliterated:9b</b> / <b>huihui_ai/huihui-4:8b</b>（修改 VisionAnalyzer 的 model 参数）。</p>
+    <p class="note" style="margin-top:10px;">说明：本机为 RTX 3060 Laptop（6GB 显存），FLUX fp8 需以 <b>--lowvram</b> 启动 ComfyUI，单张成品图约数十秒到数分钟；显存不足时可把渲染尺寸降到 512–768，或用 <code>CROCHET_NO_IMAGE=1</code> 跳过成品图。</p>
+  </section>
+
+  <!-- 6. FINISHED PRODUCT IMAGE -->
+  <section>
+    <h2><span class="n">06</span>成品效果图（本机 AI 生成）</h2>
+    <div style="display:flex; gap:18px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;">
+      <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
+      <div style="font-size:13px;">
+        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 → 拼成提示词 → 本机 ComfyUI 用 <b>FLUX.1-dev</b> 文生图 → 得到成品效果图。</p>
+        <p style="margin-bottom:8px;">它和中文图解一起，<b>嵌入 PDF 首页</b>，方便照图确认成品样子。</p>
+        <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（STYLE），可自行调整风格。</p>
+      </div>
+    </div>
   </section>
 
   <footer>

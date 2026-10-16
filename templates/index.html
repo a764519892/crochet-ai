@@ -8,6 +8,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;650&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='studio.css') }}">
+    <style>
+        .opt-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px;
+            color: #666; margin: 12px 0; cursor: pointer; line-height: 1.4; }
+        .opt-toggle input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #b4633a; }
+        .preview-image-wrap { margin: 0 0 22px; text-align: center; }
+        .preview-image-wrap img { max-width: 100%; border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+        .preview-image-cap { font-size: 12px; color: #888; margin-top: 6px; }
+    </style>
 </head>
 <body>
     <div class="page">
@@ -63,6 +72,10 @@
                         </div>
                     </div>
 
+                    <label class="opt-toggle" for="genImage">
+                        <input type="checkbox" id="genImage" checked>
+                        生成成品效果图（本地 ComfyUI，较慢，可能几分钟）
+                    </label>
                     <button class="btn" id="generateBtn" onclick="generatePattern()">Generate pattern</button>
                     <button class="btn btn-download" id="downloadBtn" onclick="downloadPDF()" style="display: none;">Download PDF</button>
                 </div>
@@ -325,7 +338,12 @@
             generateBtn.disabled = true;
             generateBtn.textContent = 'Writing pattern…';
             downloadBtn.style.display = 'none';
-            previewArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Writing rounds and assembly…</p></div>';
+            const wantsImage = document.getElementById('genImage').checked;
+            previewArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>'
+                + (wantsImage
+                    ? 'Writing rounds… then rendering the finished-product image (this can take a few minutes)…'
+                    : 'Writing rounds and assembly…')
+                + '</p></div>';
 
             try {
                 const resp = await fetch('/api/generate', {
@@ -334,6 +352,8 @@
                     body: JSON.stringify({
                         raw_parts: currentRawParts,
                         name: patternName,
+                        creature_type: currentCreatureType,
+                        generate_image: wantsImage,
                     }),
                 });
 
@@ -345,10 +365,13 @@
 
                 const data = await resp.json();
 
-                previewArea.innerHTML = `<div class="preview-content">${data.preview}</div>`;
+                const imgHtml = data.image_url
+                    ? `<div class="preview-image-wrap"><img src="${data.image_url}" alt="成品效果图"><div class="preview-image-cap">成品效果图（AI 生成）</div></div>`
+                    : '';
+                previewArea.innerHTML = `<div class="preview-content">${imgHtml}${data.preview}</div>`;
                 currentPdfUrl = data.pdf_url;
                 downloadBtn.style.display = 'block';
-                showSuccess('Pattern ready.');
+                showSuccess(data.image_url ? 'Pattern ready (with preview image).' : 'Pattern ready.');
 
             } catch (error) {
                 showError(error.message || 'Unknown error');

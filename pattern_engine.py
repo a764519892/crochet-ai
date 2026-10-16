@@ -1,8 +1,25 @@
+import os
+
 from fpdf import FPDF
+
+from pattern_i18n import to_chinese
+
+# Fonts tried (in order) when a document contains Chinese characters.
+# Override with the CROCHET_CJK_FONT environment variable.
+CJK_FONT_CANDIDATES = [
+    os.environ.get("CROCHET_CJK_FONT"),
+    r"C:\Windows\Fonts\simhei.ttf",
+    r"C:\Windows\Fonts\msyh.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+]
 
 
 class BeginnerPatternGenerator:
-    def __init__(self):
+    def __init__(self, lang="zh"):
+        self.lang = lang
         self.abbreviations = {
             "sc": "single crochet (US term)",
             "inc": "increase (2 sc in one stitch)",
@@ -15,16 +32,65 @@ class BeginnerPatternGenerator:
         }
 
     # ──────────────────────────────────────────────
+    #  DOCUMENT ASSEMBLY
+    # ──────────────────────────────────────────────
+
+    def build_document(self, pattern_data, title="Custom Pattern", lang=None):
+        """Build the full document (header + materials + parts + assembly).
+
+        With lang="zh" the finished English text is localised into Chinese.
+        """
+        lang = lang or self.lang
+        text = self.add_header()
+        text += f"## {title.replace('_', ' ')}\n\n"
+        text += self.generate_materials(pattern_data)
+        for part in pattern_data:
+            text += self.generate_part(part)
+        text += self.generate_assembly(pattern_data)
+        if lang == "zh":
+            text = to_chinese(text)
+        return text
+
+    @staticmethod
+    def _has_cjk(text):
+        return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+    @staticmethod
+    def _find_cjk_font():
+        for path in CJK_FONT_CANDIDATES:
+            if path and os.path.exists(path):
+                return path
+        return None
+
+    # ──────────────────────────────────────────────
     #  PDF OUTPUT
     # ──────────────────────────────────────────────
 
-    def save_to_pdf(self, filename, content):
-        """Saves the pattern content to a PDF file."""
+    def save_to_pdf(self, filename, content, image_path=None):
+        """Saves the pattern content to a PDF file.
+
+        If image_path is given and readable, the image is embedded under the
+        title as a "finished product" preview.
+        """
         print(f"Generating PDF: {filename}...")
 
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
+
+        family = "Helvetica"
+        if self._has_cjk(content):
+            font_path = self._find_cjk_font()
+            if font_path:
+                for style in ("", "B", "I", "BI"):
+                    pdf.add_font("CJK", style, font_path)
+                family = "CJK"
+                print(f"Using CJK font for PDF: {font_path}")
+            else:
+                print("[Warning] Chinese text found but no CJK font available. "
+                      "Set the CROCHET_CJK_FONT environment variable to a .ttf/.ttc file.")
+
+        image_done = not (image_path and os.path.exists(image_path))
 
         for clean_line in content.split("\n"):
             clean_line = clean_line.strip()
@@ -35,37 +101,48 @@ class BeginnerPatternGenerator:
                 continue
 
             if clean_line.startswith("# "):
-                pdf.set_font("Helvetica", "B", 16)
+                pdf.set_font(family, "B", 16)
                 pdf.write(10, clean_line.replace("# ", ""))
                 pdf.ln(10)
+                if not image_done:
+                    try:
+                        img_w = 100
+                        pdf.image(image_path, x=(pdf.w - img_w) / 2, w=img_w)
+                        pdf.ln(3)
+                        pdf.set_font(family, "", 9)
+                        pdf.write(5, "（成品效果图 · finished product preview）")
+                        pdf.ln(10)
+                        image_done = True
+                    except Exception as exc:  # pragma: no cover - defensive
+                        print(f"[Warning] could not embed image: {exc}")
             elif clean_line.startswith("## "):
-                pdf.set_font("Helvetica", "B", 14)
+                pdf.set_font(family, "B", 14)
                 pdf.ln(4)
                 pdf.write(8, clean_line.replace("## ", ""))
                 pdf.ln(8)
             elif clean_line.startswith("### "):
-                pdf.set_font("Helvetica", "B", 11)
+                pdf.set_font(family, "B", 11)
                 pdf.write(6, clean_line.replace("### ", ""))
                 pdf.ln(6)
             elif clean_line.startswith("**"):
-                pdf.set_font("Helvetica", "B", 9)
+                pdf.set_font(family, "B", 9)
                 pdf.write(5, clean_line.replace("**", ""))
                 pdf.ln(5)
             elif clean_line.startswith("- "):
-                pdf.set_font("Helvetica", "", 9)
+                pdf.set_font(family, "", 9)
                 pdf.write(5, clean_line)
                 pdf.ln(5)
             elif clean_line == "---":
                 pdf.ln(3)
-                pdf.set_font("Helvetica", "", 9)
+                pdf.set_font(family, "", 9)
                 pdf.write(2, "_" * 50)
                 pdf.ln(5)
             elif clean_line.startswith("*") and clean_line.endswith("*"):
-                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_font(family, "I", 9)
                 pdf.write(5, clean_line.replace("*", ""))
                 pdf.ln(5)
             else:
-                pdf.set_font("Helvetica", "", 9)
+                pdf.set_font(family, "", 9)
                 pdf.write(5, clean_line.replace("**", ""))
                 pdf.ln(5)
 
