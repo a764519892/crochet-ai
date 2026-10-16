@@ -55,10 +55,18 @@ Open **http://localhost:5001**
 
 ### 4. Command line
 
+Same pipeline as the web app — analysis, materials, rounds, assembly, PDF — without the browser.
+
 ```bash
 source venv/bin/activate
 python3 image_to_pattern.py path/to/image.jpg "Cute Dragon"
+
+# optional third argument adds notes (same as the web "Notes" box)
+python3 image_to_pattern.py path/to/image.jpg "Cute Dragon" "blue dragon, ignore the branch"
 ```
+
+Writes `<Name>_Pattern.pdf` next to where you run it. Needs the same local model as the web app
+(`ollama serve` running and `llava` installed).
 
 ## How it is put together
 

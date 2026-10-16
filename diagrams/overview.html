@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  :root{
+    --ink:#2b2620; --ink-soft:#6b6157; --line:#e3d9cb;
+    --cream:#faf6f0; --card:#ffffff;
+    --terra:#c2624a; --saffron:#d99a3a; --sage:#7d9080; --sky:#5b7fa6;
+    --violet:#8a6fa8; --rose:#c98a9b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    width:1040px; margin:0 auto; background:var(--cream); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,-apple-system,sans-serif;
+    padding:34px 30px 40px; line-height:1.5;
+  }
+  .kicker{font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--terra); font-weight:700;}
+  h1{font-size:34px; letter-spacing:-.5px; margin:4px 0 6px;}
+  .lede{color:var(--ink-soft); font-size:14.5px; max-width:80ch;}
+  .flow-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:16px;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
+  .flow-line .node{background:#f3ece2; border:1px solid var(--line); border-radius:9px;
+    padding:6px 11px; font-size:13px; font-weight:600;}
+  .arrow{color:var(--terra); font-weight:800;}
+
+  h2{font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
+     margin-bottom:12px; padding-bottom:7px; border-bottom:2px solid var(--line);}
+  h2 .n{color:var(--terra); margin-right:8px;}
+  section{margin-top:30px;}
+
+  /* architecture */
+  .arch{display:flex; flex-direction:column; gap:9px;}
+  .layer{display:flex; align-items:stretch; gap:12px;}
+  .layer .tag{flex:0 0 92px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:#fff; border-radius:10px; text-align:center; padding:6px;}
+  .layer .body{flex:1; display:flex; gap:9px; flex-wrap:wrap;}
+  .chip{background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:7px 11px; font-size:12.5px; min-width:0;}
+  .chip b{display:block; font-size:13px;}
+  .chip span{color:var(--ink-soft); font-size:11.5px;}
+  .t-ui{background:var(--saffron);} .t-app{background:var(--terra);}
+  .t-ai{background:var(--violet);} .t-eng{background:var(--sage);} .t-cli{background:var(--sky);}
+
+  /* pipeline */
+  .pipe{display:flex; gap:10px; align-items:stretch; flex-wrap:nowrap;}
+  .pstep{flex:1; background:var(--card); border:1px solid var(--line); border-top:3px solid var(--terra);
+    border-radius:12px; padding:11px 12px; position:relative;}
+  .pstep .num{font-size:11px; font-weight:800; color:var(--terra);}
+  .pstep h4{font-size:13.5px; margin:3px 0 5px;}
+  .pstep p{font-size:11.5px; color:var(--ink-soft);}
+  .pstep code{font-size:11px; background:#f1ebe1; padding:1px 4px; border-radius:4px;}
+  .conn{display:flex; align-items:center; color:var(--terra); font-weight:800; font-size:16px;}
+
+  /* steps */
+  ol.run{list-style:none; counter-reset:r; display:grid; gap:9px;}
+  ol.run li{counter-increment:r; display:flex; gap:12px; background:var(--card);
+    border:1px solid var(--line); border-radius:11px; padding:11px 14px;}
+  ol.run li::before{content:counter(r,decimal-leading-zero); font-weight:800; color:#fff;
+    background:var(--terra); width:28px; height:28px; border-radius:8px; flex:0 0 28px;
+    display:flex; align-items:center; justify-content:center; font-size:12px;}
+  ol.run .txt{flex:1; font-size:13px;}
+  ol.run .txt b{font-size:13.5px;}
+  ol.run .txt p{color:var(--ink-soft); font-size:12px; margin-top:2px;}
+  pre{background:#2b2620; color:#f5eee3; border-radius:9px; padding:10px 13px; margin-top:7px;
+    font-family:"Cascadia Code",Consolas,monospace; font-size:12px; line-height:1.65; overflow:visible;}
+  pre .c{color:#a99c8b;}
+  .note{font-size:12px; color:var(--ink-soft);}
+
+  /* shapes */
+  .shapes{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  .shape{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 8px; text-align:center;}
+  .shape svg{display:block; margin:0 auto 6px;}
+  .shape b{font-size:11.5px; display:block;}
+  .shape span{font-size:10.5px; color:var(--ink-soft);}
+
+  /* env check */
+  .checks{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .check{display:flex; align-items:center; gap:9px; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:12.5px;}
+  .dot{width:9px; height:9px; border-radius:50%; flex:0 0 9px;}
+  .ok{background:#4f9d69;} .bad{background:#c2624a;}
+  .check .v{margin-left:auto; color:var(--ink-soft); font-size:11.5px;}
+  footer{margin-top:28px; padding-top:14px; border-top:1px solid var(--line);
+    color:var(--ink-soft); font-size:11.5px; display:flex; justify-content:space-between;}
+</style>
+</head>
+<body>
+
+  <div class="kicker">Local AI · No cloud · PDF out</div>
+  <h1>🧶 Crochet AI — 项目运行图解</h1>
+  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（美式术语 + 圈数 + 针数 + 组装说明），最后导出 PDF。全部在本机运行，不调用任何云端 API。</p>
+
+  <div class="flow-line">
+    <span class="node">照片 / 文字</span><span class="arrow">→</span>
+    <span class="node">本地视觉模型识别部件</span><span class="arrow">→</span>
+    <span class="node">网页复核并修改</span><span class="arrow">→</span>
+    <span class="node">图案引擎写圈数/针数</span><span class="arrow">→</span>
+    <span class="node">PDF 下载</span>
+  </div>
+
+  <!-- 1. ARCHITECTURE -->
+  <section>
+    <h2><span class="n">01</span>系统架构 · 各文件分工</h2>
+    <div class="arch">
+      <div class="layer">
+        <div class="tag t-ui">前端<br>UI</div>
+        <div class="body">
+          <div class="chip"><b>templates/index.html</b><span>网页界面：上传/文字、复核部件、生成、下载</span></div>
+          <div class="chip"><b>static/studio.css</b><span>界面样式</span></div>
+          <div class="chip"><b>docs/</b><span>GitHub Pages 产品介绍页（不参与运行）</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="tag t-app">后端<br>Flask</div>
+        <div class="body">
+          <div class="chip"><b>app.py</b><span>本地服务 localhost:5001</span></div>
+          <div class="chip"><b>GET /</b><span>返回网页</span></div>
+          <div class="chip"><b>POST /api/analyze</b><span>调用视觉分析</span></div>
+          <div class="chip"><b>POST /api/generate</b><span>生成图解 + PDF</span></div>
+          <div class="chip"><b>GET /download/&lt;文件名&gt;</b><span>下载 PDF</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="tag t-ai">AI<br>视觉层</div>
+        <div class="body">
+          <div class="chip"><b>vision_analyzer.py</b><span>class VisionAnalyzer</span></div>
+          <div class="chip"><b>两轮分析</b><span>第 1 轮识别 → 第 2 轮自我纠错</span></div>
+          <div class="chip"><b>15 种形状</b><span>把 AI 结果归一化成引擎格式</span></div>
+          <div class="chip"><b>Ollama</b><span>本地模型服务 127.0.0.1:11434（默认 llava）</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="tag t-eng">图案<br>引擎</div>
+        <div class="body">
+          <div class="chip"><b>pattern_engine.py</b><span>class BeginnerPatternGenerator</span></div>
+          <div class="chip"><b>形状生成器</b><span>球/椭圆/圆柱/圆锥…逐个生成圈数</span></div>
+          <div class="chip"><b>fpdf2</b><span>把图解排版成 PDF</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="tag t-cli">命令行</div>
+        <div class="body">
+          <div class="chip"><b>image_to_pattern.py</b><span>图片 → 图解 PDF 的批量 CLI</span></div>
+          <div class="chip"><b>test_patterns.py</b><span>测试：模拟针数、校验数学</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. PIPELINE -->
+  <section>
+    <h2><span class="n">02</span>一次完整请求的数据流</h2>
+    <div class="pipe">
+      <div class="pstep">
+        <div class="num">STEP 1</div><h4>输入</h4>
+        <p>上传照片和/或写下备注（文字优先于照片），点 <b>Analyze</b>。</p>
+        <p><code>POST /api/analyze</code></p>
+      </div>
+      <div class="conn">→</div>
+      <div class="pstep">
+        <div class="num">STEP 2</div><h4>视觉识别</h4>
+        <p>VisionAnalyzer 发给 Ollama：第 1 轮列出所有部件；第 2 轮拿自己的结果再对照图片自检。</p>
+      </div>
+      <div class="conn">→</div>
+      <div class="pstep">
+        <div class="num">STEP 3</div><h4>复核部件</h4>
+        <p>网页列出每个部件（形状/颜色/大小/数量/位置），你可编辑、删除、新增。</p>
+      </div>
+      <div class="conn">→</div>
+      <div class="pstep">
+        <div class="num">STEP 4</div><h4>生成图解</h4>
+        <p>引擎把每个部件翻译成圈/行针数，加材料、缩写、组装说明。</p>
+        <p><code>POST /api/generate</code></p>
+      </div>
+      <div class="conn">→</div>
+      <div class="pstep">
+        <div class="num">STEP 5</div><h4>输出</h4>
+        <p>右侧实时预览，fpdf2 写成 PDF，点按钮下载。</p>
+        <p><code>generated_patterns/*.pdf</code></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. RUN -->
+  <section>
+    <h2><span class="n">03</span>怎么运行（Windows）</h2>
+    <ol class="run">
+      <li><div class="txt"><b>装好 Python 3.10+ 与 Ollama</b>
+        <p>需已安装 <a href="https://ollama.com">ollama.com</a> 的本机服务。</p></div></li>
+      <li><div class="txt"><b>准备本地视觉模型</b>
+        <p>代码默认用 <b>llava</b>；没装的话先拉取（约 4.7GB）。</p>
+        <pre>ollama pull llava
+<span class="c"># 保持服务在后台：ollama serve</span></pre></div></li>
+      <li><div class="txt"><b>创建虚拟环境并装依赖</b>
+        <pre>cd crochet-ai
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span></pre></div></li>
+      <li><div class="txt"><b>启动网页版</b>
+        <pre>python app.py   <span class="c"># 打开 http://localhost:5001</span></pre>
+        <p>流程：放照片 → Analyze → 复核部件 → Generate pattern → 下载 PDF。</p></div></li>
+      <li><div class="txt"><b>（可选）命令行批量</b>
+        <pre>python image_to_pattern.py 图片.jpg "Cute Dragon"</pre></div></li>
+    </ol>
+  </section>
+
+  <!-- 4. SHAPES -->
+  <section>
+    <h2><span class="n">04</span>图案引擎支持的 15 种形状</h2>
+    <div class="shapes">
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="13" fill="#d99a3a"/></svg><b>sphere</b><span>球：头/身/眼</span></div>
+      <div class="shape"><svg width="34" height="34"><ellipse cx="17" cy="17" rx="11" ry="14" fill="#c2624a"/></svg><b>oval</b><span>椭圆：鸟身</span></div>
+      <div class="shape"><svg width="34" height="34"><rect x="10" y="4" width="14" height="26" rx="7" fill="#7d9080"/></svg><b>cylinder</b><span>圆柱：腿/臂</span></div>
+      <div class="shape"><svg width="34" height="34"><polygon points="17,3 30,31 4,31" fill="#5b7fa6"/></svg><b>cone</b><span>圆锥：耳/角</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M4 30 A13 13 0 0 1 30 30 Z" fill="#8a6fa8"/></svg><b>dome</b><span>半球：帽/壳</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="#c98a9b"/></svg><b>flat_circle</b><span>圆片：耳/垫</span></div>
+      <div class="shape"><svg width="34" height="34"><rect x="5" y="11" width="24" height="12" rx="3" fill="#7d9080"/></svg><b>flat_leaf</b><span>扁片：叶/巾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M12 3 L22 3 L19 31 L15 31 Z" fill="#d99a3a"/></svg><b>tapered_tube</b><span>渐细管：尾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M17 31 A16 16 0 0 1 24 5 L17 31 Z" fill="#5b7fa6"/></svg><b>fan</b><span>扇形：鱼尾</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M6 8 L14 22 M14 22 L14 30 M14 22 L6 30 M14 22 L22 30" stroke="#2b2620" stroke-width="3" fill="none" stroke-linecap="round"/></svg><b>bird_feet</b><span>鸟爪</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M17 31 C2 20 8 4 17 10 C26 4 32 20 17 31 Z" fill="#7d9080"/></svg><b>heart_leaf</b><span>心形叶</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M4 30 L10 8 L17 22 L24 6 L30 30 Z" fill="#8a6fa8"/></svg><b>wing</b><span>锯齿翼</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="17" cy="19" r="8" fill="#c2624a"/><circle cx="17" cy="4" r="4" fill="#d99a3a"/><circle cx="33" cy="14" r="4" fill="#d99a3a" transform="translate(-31,0)"/><circle cx="4" cy="14" r="4" fill="#d99a3a" transform="translate(3,0)"/></svg><b>petals</b><span>花瓣</span></div>
+      <div class="shape"><svg width="34" height="34"><path d="M5 30 L12 12 L19 30 L26 14 L30 30 Z" fill="#5b7fa6"/></svg><b>spikes</b><span>尖刺</span></div>
+      <div class="shape"><svg width="34" height="34"><circle cx="12" cy="20" r="7" fill="#c98a9b"/><circle cx="24" cy="13" r="6" fill="#c2624a"/></svg><b>bobble</b><span>凸点：蛙眼</span></div>
+    </div>
+  </section>
+
+  <!-- 5. ENV CHECK -->
+  <section>
+    <h2><span class="n">05</span>本机环境自检（本次实测）</h2>
+    <div class="checks">
+      <div class="check"><span class="dot ok"></span>Python 运行环境<span class="v">3.14.6 ✔</span></div>
+      <div class="check"><span class="dot ok"></span>Ollama 服务已启动<span class="v">v0.40.4 · 11434 ✔</span></div>
+      <div class="check"><span class="dot ok"></span>pip 安装依赖（fpdf2/flask/ollama）<span class="v">✔</span></div>
+      <div class="check"><span class="dot ok"></span>Flask 网页服务<span class="v">HTTP 200 ✔</span></div>
+      <div class="check"><span class="dot ok"></span>生成图解 + PDF（不走 AI）<span class="v">✔ 已产出 3.7KB PDF</span></div>
+      <div class="check"><span class="dot bad"></span>视觉模型 llava（识别照片必需）<span class="v">未安装 ✘</span></div>
+    </div>
+    <p class="note" style="margin-top:10px;">结论：除“视觉识别照片”外均可运行。要使 <b>Analyze</b> 生效，需 <b>ollama pull llava</b>；或改用本机已装的视觉模型 <b>huihui_ai/qwen3.5-abliterated:9b</b> / <b>huihui_ai/huihui-4:8b</b>（修改 VisionAnalyzer 的 model 参数）。</p>
+  </section>
+
+  <footer>
+    <span>crochet-ai · Flask + Ollama(llava) + fpdf2</span>
+    <span>图解由 opencode 生成</span>
+  </footer>
+
+</body>
+</html>
