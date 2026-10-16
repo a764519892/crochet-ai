@@ -75,14 +75,21 @@ Writes `<Name>_Pattern.pdf` next to where you run it. Needs the same local model
 ### 5. Finished-product image (optional — needs ComfyUI)
 
 Besides the text pattern, the app can render a **what-it-will-look-like photo** of the
-finished amigurumi and drop it into the PDF. This uses a local **ComfyUI** server (FLUX.1-dev);
+finished amigurumi and drop it into the PDF. This uses a local **ComfyUI** server;
 there is no cloud call. If ComfyUI is not running the step is simply skipped.
+
+`image_generator.py` auto-detects what the server has loaded:
+
+| Backend | Detected when | Model size | Notes |
+| --- | --- | --- | --- |
+| `sd` | a checkpoint exists in `models/checkpoints` | 2–4 GB | Works on a 16 GB RAM / 6 GB VRAM laptop. Used first. |
+| `flux` | no checkpoint, but a unet in `models/unet` | ~16 GB | Needs a lot of memory (unet 11 GB + t5 4.5 GB). Only for beefier machines. |
 
 Start ComfyUI (the portable build works well), then run the app normally:
 
 ```bash
 # in the ComfyUI portable folder (low-VRAM cards need --lowvram)
-python_embeded\python.exe -s ComfyUI\main.py --lowvram --disable-dynamic-vram --disable-all-custom-nodes
+python_embeded\python.exe -s ComfyUI\main.py --lowvram --disable-all-custom-nodes
 ```
 
 Relevant settings (all optional, environment variables):
@@ -90,8 +97,9 @@ Relevant settings (all optional, environment variables):
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUI server |
-| `COMFY_SIZE` | `768` | square render size (lower = less VRAM, e.g. `512`) |
-| `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | model files |
+| `COMFY_CKPT` | first checkpoint found | force a specific checkpoint file |
+| `COMFY_SIZE` | `512x640` (`sd`) / `768` (`flux`) | render size; lower = less memory |
+| `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | FLUX model files |
 | `CROCHET_NO_IMAGE` | unset | set to `1` to skip image generation entirely |
 
 In the web UI there is a checkbox next to **Generate pattern**. On the CLI the image is

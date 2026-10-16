@@ -89,7 +89,7 @@
 
   <div class="kicker">本机 AI · 不联网 · 输出 PDF + 成品效果图</div>
   <h1>🧶 Crochet AI — 项目运行图解</h1>
-  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（中文术语 + 圈数 + 针数 + 组装说明），导出 PDF；并用本机 ComfyUI（FLUX）额外渲染一张<b>成品效果图</b>，一并放进 PDF。全程在本机运行，不调用任何云端 API。</p>
+  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（中文术语 + 圈数 + 针数 + 组装说明），导出 PDF；并用本机 ComfyUI（SD 1.5 模型）额外渲染一张<b>成品效果图</b>，一并放进 PDF。全程在本机运行，不调用任何云端 API。</p>
 
   <div class="flow-line">
     <span class="node">照片 / 文字</span><span class="arrow">→</span>
@@ -135,7 +135,7 @@
         <div class="tag t-ai">图像<br>生成</div>
         <div class="body">
           <div class="chip"><b>image_generator.py</b><span>生成成品效果图</span></div>
-          <div class="chip"><b>FLUX.1-dev (fp8)</b><span>本机 ComfyUI 文生图</span></div>
+          <div class="chip"><b>SD 1.5 模型</b><span>本机 ComfyUI 文生图（自动识别）</span></div>
           <div class="chip"><b>ComfyUI API</b><span>127.0.0.1:8188（--lowvram）</span></div>
           <div class="chip"><b>嵌入 PDF</b><span>成品效果图放在图解开头</span></div>
         </div>
@@ -187,7 +187,7 @@
       <div class="conn">→</div>
       <div class="pstep">
         <div class="num">STEP 5</div><h4>渲染成品效果图</h4>
-        <p>image_generator 把部件整理成提示词，交给本机 ComfyUI 用 FLUX 画一张成品图（可关闭）。</p>
+        <p>image_generator 把部件整理成提示词，交给本机 ComfyUI 用 SD 1.5 模型画一张成品图（可关闭）。</p>
         <p><code>POST 127.0.0.1:8188/prompt</code></p>
       </div>
       <div class="conn">→</div>
@@ -253,11 +253,11 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
       <div class="check"><span class="dot ok"></span>视觉模型 llava（识别照片）<span class="v">已安装 4.7GB ✔</span></div>
       <div class="check"><span class="dot ok"></span>Flask 网页服务<span class="v">HTTP 200 ✔</span></div>
       <div class="check"><span class="dot ok"></span>中文图解 + PDF（嵌入 SimHei）<span class="v">✔</span></div>
-      <div class="check"><span class="dot ok"></span>ComfyUI + FLUX.1-dev(fp8)<span class="v">8188 · LOW_VRAM ✔</span></div>
+      <div class="check"><span class="dot ok"></span>ComfyUI + SD 1.5 模型（出成品图）<span class="v">8188 · LOW_VRAM ✔</span></div>
       <div class="check"><span class="dot ok"></span>单元自测 test_patterns.py<span class="v">4 passed / 0 failed ✔</span></div>
       <div class="check"><span class="dot ok"></span>15 种形状中文图解全量验证<span class="v">✔ 无漏译</span></div>
     </div>
-    <p class="note" style="margin-top:10px;">说明：本机为 RTX 3060 Laptop（6GB 显存），FLUX fp8 需以 <b>--lowvram</b> 启动 ComfyUI，单张成品图约数十秒到数分钟；显存不足时可把渲染尺寸降到 512–768，或用 <code>CROCHET_NO_IMAGE=1</code> 跳过成品图。</p>
+    <p class="note" style="margin-top:10px;">说明：本机为 RTX 3060 Laptop（6GB 显存 / 16GB 内存）。原装的 FLUX fp8（主模型 11GB + 文本编码器 4.5GB ≈ 15.6GB）<b>超出 16GB 内存上限</b>，加载必崩；故成品图改用 <b>SD 1.5</b> 模型（约 2GB，内存占用约 4GB），ComfyUI 以 <code>--lowvram</code> 启动，单张约数秒。可用 <code>CROCHET_NO_IMAGE=1</code> 跳过成品图。</p>
   </section>
 
   <!-- 6. FINISHED PRODUCT IMAGE -->
@@ -266,9 +266,9 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
     <div style="display:flex; gap:18px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;">
       <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
       <div style="font-size:13px;">
-        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 → 拼成提示词 → 本机 ComfyUI 用 <b>FLUX.1-dev</b> 文生图 → 得到成品效果图。</p>
+        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）</b>文生图 → 得到成品效果图。</p>
         <p style="margin-bottom:8px;">它和中文图解一起，<b>嵌入 PDF 首页</b>，方便照图确认成品样子。</p>
-        <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（STYLE），可自行调整风格。</p>
+        <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE），可自行调整风格。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
       </div>
     </div>
   </section>
