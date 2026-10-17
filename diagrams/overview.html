@@ -273,6 +273,13 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
         <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；毛线粗细在图解页「Yarn / hook」下拉里选，会同时写进 PDF 材料和图片提示词；LoRA 自动识别（文件名含 crochet/amigurumi/knit 等即启用），强度用 <code>COMFY_LORA_STRENGTH</code> 调（现为 0.35），<code>COMFY_LORA=none</code> 可关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
       </div>
     </div>
+    <figure style="margin:16px 0 0; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px 12px;">
+      <img src="yarn-compare.png" alt="毛线粗细对比" style="width:100%; border-radius:10px;">
+      <figcaption style="font-size:12.5px; color:#6b625b; margin-top:10px; line-height:1.65;">
+        <b>毛线粗细可调 · 同一种子、同一 LoRA 强度（0.35），只换毛线</b><br>
+        从左到右：4 股牛奶棉（细密小针）→ 细线 Sport/DK → 中粗线 Worsted → 粗线 Bulky（大而松的针）。这正是真实钩织的规律——<b>线越粗、钩针越大，成品越大、针迹越粗</b>。在图解页第 04 步「Yarn / hook」下拉里选，图片与 PDF 材料段会一起变。
+      </figcaption>
+    </figure>
   </section>
 
   <footer>
