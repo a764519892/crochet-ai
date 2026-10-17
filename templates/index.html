@@ -163,6 +163,8 @@
         let currentPatternData = [];
         let currentRawParts = [];
         let currentCreatureType = '';
+        // the saved upload, sent back so the render is image-to-image from it
+        let currentImageRef = null;
 
         const uploadArea = document.getElementById('uploadArea');
         const imageInput = document.getElementById('imageInput');
@@ -232,6 +234,7 @@
                 currentCreatureType = data.creature_type || 'unknown';
                 currentRawParts = data.raw_parts || [];
                 currentPatternData = data.pattern_data || [];
+                currentImageRef = data.image_ref || null;
 
                 renderReviewPanel();
                 previewArea.innerHTML = '<div class="preview-empty"><div class="preview-empty-icon">→</div><p>Review the parts on the left, then generate.</p></div>';
@@ -367,6 +370,7 @@
                         creature_type: currentCreatureType,
                         generate_image: wantsImage,
                         yarn: document.getElementById('yarnSelect').value,
+                        image_ref: currentImageRef,
                     }),
                 });
 

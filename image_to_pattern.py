@@ -6,13 +6,18 @@ This CLI mirrors the web app so both paths produce the same document:
 
 Usage:
   python image_to_pattern.py <image_path> [output_name] [notes]
-  python image_to_pattern.py --parts <parts.json> [output_name]
+  python image_to_pattern.py --parts <parts.json> [output_name] [--image <photo>]
 
 Examples:
   python image_to_pattern.py my_crochet.jpg
   python image_to_pattern.py my_crochet.jpg "Cute Dragon"
   python image_to_pattern.py my_crochet.jpg "Cute Dragon" "blue dragon, ignore the branch"
-  python image_to_pattern.py --parts parts.json "Star Pillow"
+  python image_to_pattern.py --parts parts.json "Star Pillow" --image my_crochet.jpg
+
+Either way, when the original photo is known the preview images are rendered
+image-to-image FROM that photo, so the finished-product render keeps the pose,
+proportions and colours of the real piece instead of inventing a new one.
+(On the --parts path pass it explicitly with --image.)
 
 The --parts form skips the vision model and builds the pattern straight from a
 parts list you wrote yourself. This is the CLI equivalent of fixing the AI's
@@ -67,11 +72,14 @@ def build_pattern_text(engine, pattern_data, title, lang=None, yarn=None):
     )
 
 
-def generate_pattern(pattern_data, creature_type, output_name):
+def generate_pattern(pattern_data, creature_type, output_name, reference=None):
     """Steps 2-4: pattern text -> per-yarn preview images -> PDF.
 
     Shared by the image path and the hand-written parts path so both produce
     exactly the same document.
+
+    `reference` is the original photo. When given, the preview images are
+    rendered image-to-image from it, so they look like that exact piece.
 
     Returns:
         Path to the generated PDF.
@@ -101,10 +109,13 @@ def generate_pattern(pattern_data, creature_type, output_name):
         try:
             import image_generator
             if image_generator.available():
+                if reference:
+                    print(f"      using your photo as the reference: {reference}")
                 res = image_generator.render_yarn_variants(
                     pattern_data, creature_type, out_dir=".",
                     prefix=f"{output_name}_preview",
-                    selected=os.environ.get("CROCHET_YARN"))
+                    selected=os.environ.get("CROCHET_YARN"),
+                    reference=reference)
                 image_path_out = res.get("hero")
                 compare_path_out = res.get("compare")
                 if not image_path_out:
@@ -172,14 +183,18 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
     if output_name is None:
         output_name = Path(image_path).stem.replace(" ", "_").replace("-", "_")
 
-    return generate_pattern(pattern_data, creature_type, output_name)
+    return generate_pattern(pattern_data, creature_type, output_name,
+                            reference=image_path)
 
 
-def generate_pattern_from_parts_file(parts_file, output_name=None):
+def generate_pattern_from_parts_file(parts_file, output_name=None, reference=None):
     """
     Build the pattern straight from a hand-written parts JSON file, skipping
     the vision model entirely. Same conversion as the AI path, so the output
     is identical in shape.
+
+    `reference` is an optional photo of the real piece, used to render the
+    preview images image-to-image (so they look like that exact piece).
 
     Returns:
         Path to the generated PDF.
@@ -210,7 +225,8 @@ def generate_pattern_from_parts_file(parts_file, output_name=None):
     if output_name is None:
         output_name = Path(parts_file).stem.replace(" ", "_").replace("-", "_")
 
-    return generate_pattern(pattern_data, creature_type, output_name)
+    return generate_pattern(pattern_data, creature_type, output_name,
+                            reference=reference)
 
 
 if __name__ == "__main__":
@@ -220,21 +236,45 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(0 if args else 1)
 
-    try:
-        if args[0] == "--parts":
-            if len(args) < 2:
+    # Pull the optional flags out, whatever order they come in.
+    parts_file = None
+    reference = None
+    positional = []
+    i = 0
+    while i < len(args):
+        if args[i] == "--parts":
+            if i + 1 >= len(args):
                 print("[ERROR] --parts needs a JSON file path.")
                 sys.exit(1)
-            parts_file = args[1]
-            out_name = args[2] if len(args) > 2 else None
+            parts_file = args[i + 1]
+            i += 2
+        elif args[i] == "--image":
+            if i + 1 >= len(args):
+                print("[ERROR] --image needs a photo path.")
+                sys.exit(1)
+            reference = args[i + 1]
+            i += 2
+        else:
+            positional.append(args[i])
+            i += 1
+
+    try:
+        if parts_file is not None:
             if not Path(parts_file).exists():
                 print(f"[ERROR] Parts file not found: {parts_file}")
                 sys.exit(1)
-            generate_pattern_from_parts_file(parts_file, out_name)
+            if reference and not Path(reference).exists():
+                print(f"[ERROR] Reference image not found: {reference}")
+                sys.exit(1)
+            out_name = positional[0] if positional else None
+            generate_pattern_from_parts_file(parts_file, out_name, reference)
         else:
-            image_path = args[0]
-            out_name = args[1] if len(args) > 1 else None
-            user_notes = args[2] if len(args) > 2 else None
+            if not positional:
+                print("[ERROR] Give me a photo path, or use --parts parts.json.")
+                sys.exit(1)
+            image_path = positional[0]
+            out_name = positional[1] if len(positional) > 1 else None
+            user_notes = positional[2] if len(positional) > 2 else None
             if not Path(image_path).exists():
                 print(f"[ERROR] Image not found: {image_path}")
                 sys.exit(1)

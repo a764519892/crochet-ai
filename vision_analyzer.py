@@ -360,20 +360,16 @@ Return ONLY valid JSON, no other text:
             position = part.get("position", "")
             color = self._clean_color(part.get("color", "Unknown"), part.get("name", "Part"))
 
-            # Auto-correct eyes: the AI often picks oversized or wrong shapes.
-            #  - cylinder eyes → flat_circle (tubes don't look like eyes)
-            #  - sphere/oval eyes → flat_circle (3D balls are way too big)
-            #  - medium/large eyes → capped to small (eyes should be tiny/small)
+            # Auto-correct eyes. A crocheted 3D ball is never right for an eye:
+            # eyes are either 6-9mm safety eyes (see MATERIALS) or a small flat
+            # circle sewn on. So every eye becomes a small flat_circle.
             name_lower = part.get("name", "").lower()
             if "eye" in name_lower:
-                oversized_3d = part_type in ("sphere", "oval") and size in ("medium", "large")
-                wrong_shape = part_type == "cylinder"
-
-                if oversized_3d or wrong_shape:
+                if part_type != "flat_circle" or size not in ("tiny", "small"):
                     old_desc = f"{part_type}/{size}"
                     part_type = "flat_circle"
-                    size = "small"
-                    print(f"[Auto-fix] Eye '{part.get('name')}': {old_desc} → flat_circle/small")
+                    size = "tiny" if size == "tiny" else "small"
+                    print(f"[Auto-fix] Eye '{part.get('name')}': {old_desc} → flat_circle/{size}")
 
             part_name = part.get("name", "Part")
             if count > 1:
@@ -483,6 +479,19 @@ Return ONLY valid JSON, no other text:
                     "max_stitches": 18,
                     "height": 3,
                 })
+
+            # Explicit engine parameters beat the size table, so a hand-written
+            # parts file can pin exact numbers (a long narrow ear, say) instead
+            # of settling for the coarse tiny/small/medium/large buckets.
+            for key in ("max_stitches", "height", "width", "base", "length",
+                        "start_width", "end_width", "num_petals", "num_spikes",
+                        "points", "base_rounds"):
+                if key in part:
+                    try:
+                        base[key] = int(part[key])
+                    except (TypeError, ValueError):
+                        print(f"[Warning] ignoring non-numeric {key}="
+                              f"{part[key]!r} for '{part_name}'")
 
             pattern_parts.append(base)
 

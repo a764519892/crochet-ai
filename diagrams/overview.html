@@ -156,6 +156,7 @@
         <div class="body">
           <div class="chip"><b>image_to_pattern.py</b><span>图片 → 图解 PDF 的批量 CLI</span></div>
           <div class="chip"><b>--parts 手写部件</b><span>AI 看错时，自己写部件表出图</span></div>
+          <div class="chip"><b>--image 参考图</b><span>用你的照片做图生图，渲染更像实物</span></div>
           <div class="chip"><b>test_patterns.py</b><span>测试：模拟针数、校验数学（5 项）</span></div>
         </div>
       </div>
@@ -224,7 +225,10 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
         <pre>python image_to_pattern.py 图片.jpg "Cute Dragon"
 
 <span class="c"># AI 看错了？自己写部件表，跳过视觉模型：</span>
-python image_to_pattern.py --parts 部件.json "Star_Pillow"</pre></div></li>
+python image_to_pattern.py --parts 部件.json "Star_Pillow"
+
+<span class="c"># 想让渲染更像实物？把原照片当参考图（图生图）：</span>
+python image_to_pattern.py --parts 兔子.json "Cream_Bunny" --image 兔子.jpg</pre></div></li>
     </ol>
   </section>
 
@@ -274,7 +278,7 @@ python image_to_pattern.py --parts 部件.json "Star_Pillow"</pre></div></li>
       <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
       <div style="font-size:13px;">
         <p style="margin-bottom:8px;"><b>示例：粉色五角星抱枕</b>（<code>star</code> 形状，一整片钩成，5 个角从圆底长出来；钩 2 片缝合、边缘钩小球、塞棉）。</p>
-        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 + <b>你选的毛线粗细（4 股牛奶棉 · 2.0–2.5mm）</b> → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA（0.35）</b> 文生图 → 得到成品效果图。</p>
+        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 + <b>你选的毛线粗细（4 股牛奶棉 · 2.0–2.5mm）</b> → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA（0.35）</b> 生成。若手里有<b>原照片</b>（网页版一直有；命令行加 <code>--image 照片.jpg</code>），则改用<b>图生图</b>：姿势、比例、颜色都跟着照片走，只把表面重新渲染成毛线，所以成品图更像你自己那只；强度用 <code>COMFY_DENOISE</code> 调（默认 0.35，越低越像照片）。</p>
         <p style="margin-bottom:8px;">成品图 + <b>四档毛线粗细的对比图</b>，都<b>嵌进 PDF 首页</b>——买线的人可以直接对比着挑一种线，照着钩。</p>
         <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；毛线粗细在图解页「Yarn / hook」下拉里选，会同时写进 PDF 材料和图片提示词；LoRA 自动识别（文件名含 crochet/amigurumi/knit 等即启用），强度用 <code>COMFY_LORA_STRENGTH</code> 调（现为 0.35），<code>COMFY_LORA=none</code> 可关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
         <p class="note"><b>扁平物要注意：</b>本机视觉模型容易把抱枕、杯垫、毯子看成「有头有身体的动物」。要么在网页的复核界面改部件，要么自己写部件表用 <code>image_to_pattern.py --parts 部件.json</code>——引擎不关心部件是谁给的。这张星星抱枕就是这么出的。</p>

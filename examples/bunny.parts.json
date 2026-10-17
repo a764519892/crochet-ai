@@ -1,0 +1,29 @@
+{
+  "_comment": "Cream bunny rabbit from photos/bunny.jpg - a big round head, two long narrow ears with pink inner ears, an oval body, short arms and chunky legs, a pink nose and black safety eyes. The exact stitch numbers are pinned per piece (max_stitches/height) so the pieces read like the photo instead of all being the same size. The preview is rendered image-to-image from that photo, so it keeps the photo's pose, proportions and colours.",
+  "creature_type": "cream off-white bunny rabbit",
+  "parts": [
+    {"type": "oval",   "name": "Head",      "color": "cream", "size": "large",  "count": 1,
+     "position": "top of body", "max_stitches": 30, "height": 7},
+
+    {"type": "oval",   "name": "Body",      "color": "cream", "size": "large",  "count": 1,
+     "position": "", "max_stitches": 30, "height": 10},
+
+    {"type": "oval",   "name": "Ear",       "color": "cream", "size": "small",  "count": 2,
+     "position": "top of head", "max_stitches": 18, "height": 15},
+
+    {"type": "oval",   "name": "Inner Ear", "color": "pink",  "size": "tiny",   "count": 2,
+     "position": "front of ears", "max_stitches": 12, "height": 10},
+
+    {"type": "oval",   "name": "Arm",       "color": "cream", "size": "tiny",   "count": 2,
+     "position": "sides of body", "max_stitches": 12, "height": 8},
+
+    {"type": "oval",   "name": "Leg",       "color": "cream", "size": "medium", "count": 2,
+     "position": "bottom of body", "max_stitches": 24, "height": 9},
+
+    {"type": "cone",   "name": "Nose",      "color": "pink",  "size": "tiny",   "count": 1,
+     "position": "front of face"},
+
+    {"type": "sphere", "name": "Eye",       "color": "black", "size": "small",  "count": 2,
+     "position": "front of face", "max_stitches": 6}
+  ]
+}

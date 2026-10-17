@@ -13,6 +13,13 @@ Two backends are supported and auto-detected from what the server has loaded:
   * "flux" - FLUX.1-dev (UNETLoader + DualCLIPLoader + VAELoader). Needs a lot
              more memory (unet 11 GB + t5 4.5 GB), only for beefier machines.
 
+Both render from the prompt alone, but when the caller has the original photo we
+can do better: `init_image=` runs image-to-image instead, so the render keeps the
+pose, proportions and colours of the real photo and only re-renders it as a
+handmade crochet version. That is what makes the preview look like the user's own
+piece rather than "a" bunny. Set the similarity with `COMFY_DENOISE` (default
+0.35: low = very close to the photo, high = more creative).
+
 Everything degrades gracefully: if ComfyUI is not reachable, or has no usable
 model, the caller simply skips the image.
 
@@ -78,6 +85,15 @@ SD_DEFAULT_HEIGHT = int(os.environ.get("COMFY_HEIGHT", os.environ.get("COMFY_SIZ
 FLUX_DEFAULT_WIDTH = int(os.environ.get("COMFY_WIDTH", os.environ.get("COMFY_SIZE", "768")))
 FLUX_DEFAULT_HEIGHT = int(os.environ.get("COMFY_HEIGHT", os.environ.get("COMFY_SIZE", "768")))
 
+# image-to-image strength when the original photo is available: how much of the
+# photo is kept. 0.35 stays very close to the photo (same pose, proportions and
+# colours, only the surface re-rendered as yarn); raise it for a freer
+# interpretation, lower it and it stops looking handmade.
+IMG2IMG_DENOISE = float(os.environ.get("COMFY_DENOISE", "0.35"))
+
+# reference images already pushed to ComfyUI, keyed by (path, mtime, size)
+_UPLOADED = {}
+
 
 def _get(path, timeout=10):
     with urllib.request.urlopen(f"{COMFY_URL}{path}", timeout=timeout) as r:
@@ -91,6 +107,58 @@ def _post(path, payload, timeout=30):
     )
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
+
+
+def _upload_image(path):
+    """Copy a local image into ComfyUI's input folder; returns its server name.
+
+    LoadImage can only read files that live inside ComfyUI's own input dir, so
+    an image-to-image job has to upload the reference first. Uploads are cached
+    per file (path + mtime + size) so rendering N yarn variants uploads once.
+    Returns None if the upload fails (the caller then falls back to text-to-image).
+    """
+    name = os.path.basename(path)
+    try:
+        key = (os.path.abspath(path), os.path.getmtime(path), os.path.getsize(path))
+    except OSError as exc:
+        print("[image] cannot stat reference image:", exc)
+        return None
+    if key in _UPLOADED:
+        return _UPLOADED[key]
+
+    try:
+        with open(path, "rb") as fh:
+            blob = fh.read()
+    except OSError as exc:
+        print("[image] cannot read reference image:", exc)
+        return None
+
+    import mimetypes
+    boundary = "----crochetai" + str(int(time.time() * 1000))
+    ctype = mimetypes.guess_type(name)[0] or "image/png"
+    body = b"".join([
+        f"--{boundary}\r\n".encode(),
+        f'Content-Disposition: form-data; name="image"; filename="{name}"\r\n'.encode(),
+        f"Content-Type: {ctype}\r\n\r\n".encode(),
+        blob,
+        f"\r\n--{boundary}--\r\n".encode(),
+    ])
+    req = urllib.request.Request(
+        f"{COMFY_URL}/upload/image", data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except Exception as exc:
+        print("[image] reference upload failed:", exc)
+        return None
+
+    server_name = resp.get("name") or name
+    sub = resp.get("subfolder") or ""
+    full = f"{sub}/{server_name}" if sub else server_name
+    print(f"[image] uploaded reference {name} -> {full}")
+    _UPLOADED[key] = full
+    return full
 
 
 def available(url=None):
@@ -278,6 +346,30 @@ def build_sd_workflow(prompt, negative, ckpt_name, width=512, height=640,
     return wf
 
 
+def build_sd_img2img_workflow(prompt, negative, ckpt_name, image_name,
+                              width=512, height=640, steps=25, cfg=7.0,
+                              seed=None, denoise=None, sampler="dpmpp_2m",
+                              scheduler="karras", lora=None, lora_strength=0.35):
+    """Stable Diffusion image-to-image from a reference photo.
+
+    Same graph as build_sd_workflow, but the empty latent is replaced by the
+    reference photo: LoadImage -> ImageScale -> VAEEncode -> KSampler(denoise).
+    A low denoise keeps the photo's composition and colours.
+    """
+    dn = IMG2IMG_DENOISE if denoise is None else float(denoise)
+    wf = build_sd_workflow(prompt, negative, ckpt_name, width=width, height=height,
+                           steps=steps, cfg=cfg, seed=seed, sampler=sampler,
+                           scheduler=scheduler, lora=lora, lora_strength=lora_strength)
+    wf["9"] = {"class_type": "LoadImage", "inputs": {"image": image_name}}
+    wf["10"] = {"class_type": "ImageScale",
+                "inputs": {"image": ["9", 0], "upscale_method": "lanczos",
+                           "width": width, "height": height, "crop": "center"}}
+    wf["4"] = {"class_type": "VAEEncode",
+               "inputs": {"pixels": ["10", 0], "vae": ["1", 2]}}
+    wf["5"]["inputs"]["denoise"] = dn
+    return wf
+
+
 def build_flux_workflow(prompt, negative="", width=768, height=768,
                         steps=20, guidance=3.5, seed=None):
     """FLUX.1-dev txt2img (UNETLoader + DualCLIPLoader + FluxGuidance)."""
@@ -308,8 +400,12 @@ def build_flux_workflow(prompt, negative="", width=768, height=768,
 
 
 def generate(prompt, out_path, negative=None, width=None, height=None,
-             steps=None, guidance=None, seed=None, timeout=1800):
+             steps=None, guidance=None, seed=None, timeout=1800,
+             init_image=None, denoise=None):
     """Render one image and save it to out_path.
+
+    Pass `init_image` (a local file) to run image-to-image instead of
+    text-to-image, so the result follows that reference photo.
 
     Returns out_path on success, or None if ComfyUI is unavailable / failed.
     """
@@ -331,12 +427,25 @@ def generate(prompt, out_path, negative=None, width=None, height=None,
         st = steps or 25
         cfg = guidance or 7.0
         lora = pick_lora()
-        wf = build_sd_workflow(prompt, neg, name, width=w, height=h,
-                               steps=st, cfg=cfg, seed=seed,
-                               lora=lora, lora_strength=COMFY_LORA_STRENGTH)
-        print(f"[image] backend=sd checkpoint={name} {w}x{h} steps={st} cfg={cfg}"
-              + (f" lora={lora}@{COMFY_LORA_STRENGTH}" if lora else " lora=none"))
+        ref = _upload_image(init_image) if init_image else None
+        if ref:
+            dn = IMG2IMG_DENOISE if denoise is None else float(denoise)
+            wf = build_sd_img2img_workflow(prompt, neg, name, ref, width=w, height=h,
+                                           steps=st, cfg=cfg, seed=seed, denoise=dn,
+                                           lora=lora, lora_strength=COMFY_LORA_STRENGTH)
+            print(f"[image] backend=sd img2img ref={os.path.basename(init_image)} "
+                  f"denoise={dn} {w}x{h} steps={st} cfg={cfg}"
+                  + (f" lora={lora}@{COMFY_LORA_STRENGTH}" if lora else " lora=none"))
+        else:
+            wf = build_sd_workflow(prompt, neg, name, width=w, height=h,
+                                   steps=st, cfg=cfg, seed=seed,
+                                   lora=lora, lora_strength=COMFY_LORA_STRENGTH)
+            print(f"[image] backend=sd checkpoint={name} {w}x{h} steps={st} cfg={cfg}"
+                  + (f" lora={lora}@{COMFY_LORA_STRENGTH}" if lora else " lora=none"))
     else:
+        if init_image:
+            print("[image] img2img is only wired up for the SD backend; "
+                  "rendering from the prompt instead")
         w = width or FLUX_DEFAULT_WIDTH
         h = height or FLUX_DEFAULT_HEIGHT
         st = steps or 20
@@ -447,12 +556,17 @@ def _montage(paths, out_path, labels):
 
 
 def render_yarn_variants(pattern_data, title="amigurumi", out_dir="generated_patterns",
-                         prefix="preview", yarns=None, selected=None, seed=None):
+                         prefix="preview", yarns=None, selected=None, seed=None,
+                         reference=None, denoise=None):
     """Render the same finished product once per yarn thickness.
 
     Every render shares one seed, so the only difference between them is the
     yarn thickness described in the prompt - which is what makes the resulting
     strip a fair "choose your yarn" comparison.
+
+    `reference` is the user's own photo: when given, each render runs
+    image-to-image from it, so the preview looks like *their* piece (same pose,
+    proportions and colours) instead of a generic one.
 
     Returns {"by_yarn": {key: path}, "compare": path|None, "hero": path|None}.
     `hero` is the render of the selected yarn (that is the one embedded as the
@@ -468,17 +582,23 @@ def render_yarn_variants(pattern_data, title="amigurumi", out_dir="generated_pat
     if seed is None:
         seed = int(time.time() * 1000) % (2 ** 31)
 
+    if reference and not os.path.exists(reference):
+        print(f"[image] reference photo not found ({reference}); "
+              "rendering from the prompt only")
+        reference = None
+
     try:
         from pattern_i18n import yarn_label
     except Exception:
         yarn_label = lambda k: k  # noqa: E731
 
-    print(f"[image] rendering {len(keys)} yarn variants at seed {seed}...")
+    mode = "image-to-image from your photo" if reference else "text-to-image"
+    print(f"[image] rendering {len(keys)} yarn variants ({mode}) at seed {seed}...")
     paths = {}
     for key in keys:
         prompt = build_product_prompt(pattern_data, title, yarn=key)
         path = os.path.join(out_dir, f"{prefix}_{key}.png")
-        if generate(prompt, path, seed=seed):
+        if generate(prompt, path, seed=seed, init_image=reference, denoise=denoise):
             paths[key] = path
 
     if not paths:

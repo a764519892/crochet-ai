@@ -13,7 +13,8 @@ The generator itself is not hosted. Clone this repo and run it on your machine.
 - Ten+ shape families (sphere, cylinder, cone, star, leaves, wings, petals, spikes, …)
 - Beginner PDF with **Chinese** terms (short/inc/dec, round counts) and assembly
 - **Finished-product preview image** (optional, rendered locally with ComfyUI + SD/FLUX)
-- CLI for batch use, including a hand-written parts file (`--parts`)
+- The preview is rendered image-to-image **from your own photo**, so it looks like your piece
+- CLI for batch use, including a hand-written parts file (`--parts`) and a reference photo (`--image`)
 
 The pattern document is Chinese by default (`zh`). Set `CROCHET_LANG=en` for the original
 English wording.
@@ -81,6 +82,9 @@ thing by writing the parts into a JSON file and skipping the model:
 
 ```bash
 python3 image_to_pattern.py --parts examples/star_pillow.parts.json "Star_Pillow"
+
+# same, but render the preview images image-to-image from your own photo
+python3 image_to_pattern.py --parts examples/bunny.parts.json "Cream_Bunny" --image photos/bunny.jpg
 ```
 
 `parts.json` is either a JSON array of parts or `{"creature_type": ..., "parts": [...]}`.
@@ -102,6 +106,14 @@ Part fields are the same vocabulary the vision model emits:
 is `tiny`/`small`/`medium`/`large` and `count` is how many to make. Conversion is
 the same code the AI path uses, so the output is identical in shape.
 
+You can also pin the exact numbers instead of settling for the size buckets — any
+of the engine's own parameters (`max_stitches`, `height`, `width`, `base`,
+`length`, `points`, `base_rounds`, …) may be given per part, and it wins over
+`size`. `examples/bunny.parts.json` uses this so the head is round while the ears
+are long and narrow. A part named `… eye …` is always built as a small flat
+circle, never a 3D ball, because the materials section tells the reader to use
+6–9 mm safety eyes.
+
 ### 5. Finished-product image (optional — needs ComfyUI)
 
 Besides the text pattern, the app can render a **what-it-will-look-like photo** of the
@@ -121,6 +133,14 @@ SD 1.5 amigurumi/crochet LoRA into `models/loras` and it is picked up automatica
 `WorldOfCrochet.safetensors`; set `COMFY_LORA=none` to turn it off or
 `COMFY_LORA=<file>` to force one. `COMFY_LORA_STRENGTH` (default `0.35`) sets how
 strong the crochet texture is — lower is subtler.
+
+**It renders from your own photo.** When the original photo is available (it always
+is in the web app; on the CLI you pass it with `--image`) the preview is rendered
+*image-to-image* from that photo instead of from the prompt alone. The pose,
+proportions and colours of the real piece are kept and only the surface is
+re-rendered as yarn — that is what makes the preview look like *your* bunny rather
+than "a" bunny. `COMFY_DENOISE` (default `0.35`) is how far it may drift from the
+photo: lower = closer, higher = more creative.
 
 **Yarn thickness** is a single setting shared by the written pattern and the image,
 so the two always agree. Pick it in the web UI (*Yarn / hook*), or with the
@@ -159,6 +179,7 @@ Relevant settings (all optional, environment variables):
 | `COMFY_CKPT` | first checkpoint found | force a specific checkpoint file |
 | `COMFY_LORA` | auto (first crochet-ish file) | LoRA file name; `none` disables it |
 | `COMFY_LORA_STRENGTH` | `0.35` | LoRA weight (lower = subtler crochet texture) |
+| `COMFY_DENOISE` | `0.35` | image-to-image strength when a photo is used (lower = closer to the photo) |
 | `CROCHET_YARN` | `milk_cotton` | yarn/hook preset (see the table above) |
 | `COMFY_SIZE` | `512x640` (`sd`) / `768` (`flux`) | render size; lower = less memory |
 | `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | FLUX model files |
@@ -194,7 +215,8 @@ photo and/or text
 ```
 
 (Or skip the model entirely: `image_to_pattern.py --parts parts.json` goes
-straight from your own parts list to the same engine.)
+straight from your own parts list to the same engine. Add `--image photo.jpg` to
+render the preview images from that photo.)
 
 Shape notes: [SHAPE_TYPES.md](SHAPE_TYPES.md)
 
@@ -207,7 +229,7 @@ pattern_i18n.py        English -> Chinese translation of the document
 image_generator.py     Finished-product image via local ComfyUI (SD / FLUX)
 vision_analyzer.py     Ollama vision
 image_to_pattern.py    CLI (photo, or --parts for a hand-written parts list)
-examples/              example parts JSON (see --parts in the README)
+examples/              example parts JSON — star_pillow, bunny (see --parts in the README)
 templates/index.html   Desk UI
 static/studio.css      Shared look
 docs/                  GitHub Pages product page

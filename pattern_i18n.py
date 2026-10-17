@@ -161,6 +161,8 @@ PART_NAMES = {
     "balls": "小球", "pompom": "毛球", "pom pom": "毛球",
     "left": "左", "right": "右", "upper": "上", "lower": "下",
     "middle": "中", "inner": "内", "outer": "外", "side": "侧",
+    "inner ear": "耳朵内片", "inner ears": "耳朵内片", "muzzle": "口鼻部",
+    "cheek blush": "腮红", "blush": "腮红",
 }
 
 COLORS = {
@@ -181,6 +183,8 @@ POSITIONS = {
     "body": "身体", "head": "头部", "face": "脸部", "top of head.": "头顶",
     "edge": "边缘", "along the edge": "沿边缘", "around the edge": "沿边缘",
     "all around the edge": "沿整个边缘", "center of the star": "星星中心",
+    "front of ears": "耳朵前面", "front of the ears": "耳朵前面",
+    "front of body": "身体前面", "back of head": "头后面",
 }
 
 # Short labels for the finished-product comparison strip, keyed by the

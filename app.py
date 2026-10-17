@@ -23,6 +23,26 @@ os.makedirs('generated_patterns', exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+
+def _safe_reference(path):
+    """Only accept a reference photo that is one of our own uploads.
+
+    /api/generate takes the path back from the browser, so never trust it as
+    an arbitrary file path: it must resolve inside uploads/ and exist.
+    """
+    if not path:
+        return None
+    try:
+        base = os.path.abspath(app.config['UPLOAD_FOLDER'])
+        full = os.path.abspath(path)
+        if os.path.commonpath([base, full]) == base and os.path.exists(full):
+            return full
+    except (ValueError, OSError):
+        pass
+    print("[GENERATE] ignoring unusable image_ref:", path)
+    return None
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -74,6 +94,8 @@ def analyze():
             'creature_type': result['creature_type'],
             'raw_parts': result['raw_parts'],
             'pattern_data': result['pattern_data'],
+            # the saved upload, so /api/generate can render from the real photo
+            'image_ref': filepath,
         })
 
     except Exception as e:
@@ -126,11 +148,15 @@ def generate():
                 import image_generator
                 if image_generator.available():
                     prefix = f"{secure_filename(pattern_name)}_preview"
+                    reference = _safe_reference(data.get('image_ref'))
+                    if reference:
+                        print("[GENERATE] using the uploaded photo as the "
+                              "image-to-image reference:", reference)
                     print("[GENERATE] rendering finished-product image per yarn thickness...")
                     res = image_generator.render_yarn_variants(
                         pattern_data, creature_type or pattern_name,
                         out_dir='generated_patterns', prefix=prefix,
-                        selected=yarn)
+                        selected=yarn, reference=reference)
                     image_path = res.get('hero')
                     compare_image_path = res.get('compare')
                     if image_path:
