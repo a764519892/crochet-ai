@@ -12,7 +12,7 @@ The generator itself is not hosted. Clone this repo and run it on your machine.
 - Review UI so you can edit detected parts before writing
 - Eight+ shape families (sphere, cylinder, cone, leaves, wings, petals, spikes, …)
 - Beginner PDF with **Chinese** terms (short/inc/dec, round counts) and assembly
-- **Finished-product preview image** (optional, rendered locally with ComfyUI + FLUX)
+- **Finished-product preview image** (optional, rendered locally with ComfyUI + SD/FLUX)
 - CLI for batch use
 
 The pattern document is Chinese by default (`zh`). Set `CROCHET_LANG=en` for the original
@@ -85,6 +85,12 @@ there is no cloud call. If ComfyUI is not running the step is simply skipped.
 | `sd` | a checkpoint exists in `models/checkpoints` | 2–4 GB | Works on a 16 GB RAM / 6 GB VRAM laptop. Used first. |
 | `flux` | no checkpoint, but a unet in `models/unet` | ~16 GB | Needs a lot of memory (unet 11 GB + t5 4.5 GB). Only for beefier machines. |
 
+For the `sd` backend a **LoRA** makes the render look like real crochet. Drop any
+SD 1.5 amigurumi/crochet LoRA into `models/loras` and it is picked up automatically
+(the file name is matched against crochet/amigurumi/knit/yarn/wool). For example
+`WorldOfCrochet.safetensors`; set `COMFY_LORA=none` to turn it off or
+`COMFY_LORA=<file>` to force one.
+
 Start ComfyUI (the portable build works well), then run the app normally:
 
 ```bash
@@ -98,6 +104,8 @@ Relevant settings (all optional, environment variables):
 | --- | --- | --- |
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUI server |
 | `COMFY_CKPT` | first checkpoint found | force a specific checkpoint file |
+| `COMFY_LORA` | auto (first crochet-ish file) | LoRA file name; `none` disables it |
+| `COMFY_LORA_STRENGTH` | `0.8` | LoRA weight |
 | `COMFY_SIZE` | `512x640` (`sd`) / `768` (`flux`) | render size; lower = less memory |
 | `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | FLUX model files |
 | `CROCHET_NO_IMAGE` | unset | set to `1` to skip image generation entirely |

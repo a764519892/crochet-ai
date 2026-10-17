@@ -40,6 +40,12 @@ CLIP_L = os.environ.get("COMFY_CLIP_L", "clip_l.safetensors")
 CLIP_T5 = os.environ.get("COMFY_CLIP_T5", "t5xxl_fp8_e4m3fn.safetensors")
 VAE_NAME = os.environ.get("COMFY_VAE", "ae.safetensors")
 
+# LoRA (SD backend only): "" = auto-pick a crochet-ish lora if one is installed,
+# "none"/"off"/"0" = never use one, anything else = that exact file name.
+COMFY_LORA = os.environ.get("COMFY_LORA", "")
+COMFY_LORA_STRENGTH = float(os.environ.get("COMFY_LORA_STRENGTH", "0.8"))
+LORA_HINTS = ("crochet", "amigurumi", "amigurami", "knit", "knitted", "yarn", "wool")
+
 # ---- prompts ---------------------------------------------------------------
 # Shared look-and-feel of the subject.
 SUBJECT_STYLE = (
@@ -131,6 +137,29 @@ def negative_prompt():
     return SD_NEGATIVE
 
 
+def list_loras():
+    """LoRA files the ComfyUI server can see."""
+    return [l for l in _enum("LoraLoader", "lora_name")
+            if l.lower().endswith((".safetensors", ".ckpt", ".pt"))]
+
+
+def pick_lora():
+    """Choose a LoRA for the SD backend, or None.
+
+    Auto mode prefers a file whose name looks crochet/knit related, so dropping
+    any amigurumi LoRA into models/loras is enough for it to be picked up.
+    """
+    if COMFY_LORA.lower() in ("none", "off", "0"):
+        return None
+    loras = list_loras()
+    if COMFY_LORA:
+        return COMFY_LORA if COMFY_LORA in loras else None
+    for name in loras:
+        if any(h in name.lower() for h in LORA_HINTS):
+            return name
+    return None
+
+
 def build_product_prompt(pattern_data, title="amigurumi"):
     """Turn the analysed pattern into a concrete image prompt."""
     names, colors = [], []
@@ -161,19 +190,37 @@ def build_product_prompt(pattern_data, title="amigurumi"):
 # --------------------------------------------------------------------------- #
 def build_sd_workflow(prompt, negative, ckpt_name, width=512, height=640,
                       steps=25, cfg=7.0, seed=None,
-                      sampler="dpmpp_2m", scheduler="karras"):
-    """Standard Stable Diffusion txt2img (SD 1.5 / SD 2.x / SDXL checkpoints)."""
+                      sampler="dpmpp_2m", scheduler="karras",
+                      lora=None, lora_strength=0.8):
+    """Standard Stable Diffusion txt2img (SD 1.5 / SD 2.x / SDXL checkpoints).
+
+    When `lora` is given, a LoraLoader is inserted between the checkpoint and
+    everything downstream (prompt encoding and sampling), so both the text
+    encoder and the unet see the LoRA.
+    """
     seed = int(seed if seed is not None else time.time() * 1000) % (2 ** 31)
-    return {
+
+    wf = {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt_name}},
-        "2": {"class_type": "CLIPTextEncode",
-              "inputs": {"text": prompt, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode",
-              "inputs": {"text": negative, "clip": ["1", 1]}},
+    }
+
+    if lora:
+        wf["8"] = {"class_type": "LoraLoader",
+                   "inputs": {"lora_name": lora,
+                              "strength_model": lora_strength,
+                              "strength_clip": lora_strength,
+                              "model": ["1", 0], "clip": ["1", 1]}}
+        model_ref, clip_ref = ["8", 0], ["8", 1]
+    else:
+        model_ref, clip_ref = ["1", 0], ["1", 1]
+
+    wf.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "EmptyLatentImage",
               "inputs": {"width": width, "height": height, "batch_size": 1}},
         "5": {"class_type": "KSampler",
-              "inputs": {"model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0],
+              "inputs": {"model": model_ref, "positive": ["2", 0], "negative": ["3", 0],
                          "latent_image": ["4", 0], "seed": seed, "steps": steps,
                          "cfg": cfg, "sampler_name": sampler,
                          "scheduler": scheduler, "denoise": 1.0}},
@@ -181,7 +228,8 @@ def build_sd_workflow(prompt, negative, ckpt_name, width=512, height=640,
               "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
         "7": {"class_type": "SaveImage",
               "inputs": {"filename_prefix": "crochet_preview", "images": ["6", 0]}},
-    }
+    })
+    return wf
 
 
 def build_flux_workflow(prompt, negative="", width=768, height=768,
@@ -236,9 +284,12 @@ def generate(prompt, out_path, negative=None, width=None, height=None,
         h = height or SD_DEFAULT_HEIGHT
         st = steps or 25
         cfg = guidance or 7.0
+        lora = pick_lora()
         wf = build_sd_workflow(prompt, neg, name, width=w, height=h,
-                               steps=st, cfg=cfg, seed=seed)
-        print(f"[image] backend=sd checkpoint={name} {w}x{h} steps={st} cfg={cfg}")
+                               steps=st, cfg=cfg, seed=seed,
+                               lora=lora, lora_strength=COMFY_LORA_STRENGTH)
+        print(f"[image] backend=sd checkpoint={name} {w}x{h} steps={st} cfg={cfg}"
+              + (f" lora={lora}@{COMFY_LORA_STRENGTH}" if lora else " lora=none"))
     else:
         w = width or FLUX_DEFAULT_WIDTH
         h = height or FLUX_DEFAULT_HEIGHT
