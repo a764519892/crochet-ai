@@ -82,6 +82,25 @@ BODY_LINES = {
         "*本片用行钩，由窄到宽呈扇形展开。*",
     "*Each foot has 3 toes made from chains.*": "*每只脚有 3 个用锁针做的脚趾。*",
     "*Small rounded bump — stuff lightly for a 3D effect.*": "*小圆凸起，少量塞棉做出立体感。*",
+    # ── star (generate_star) ──
+    "*This piece is a flat five-pointed star worked in one piece. Do not stuff it.*":
+        "*本片是一整片钩成的扁平五角星，现在不要塞棉。*",
+    "*You will make 2 identical star pieces and join them later to make a cushion.*":
+        "*共钩 2 片一模一样的星星，之后再缝合做成抱枕。*",
+    "*This base is the middle of the star — the 5 points grow out of it.*":
+        "*这个圆底就是星星的中心，5 个角从它周围长出来。*",
+    "*Fasten off, then slip stitch down the side of this point back to the base.*":
+        "*收针，再沿这个角的侧边引拔回到星星底部。*",
+    "*To make a flat star (garland, coaster, applique): fasten off and weave in all the ends — you are done.*":
+        "*要做扁平的星星（挂饰、杯垫、贴花）：收针、藏好所有线头就完成了。*",
+    "*To make a stuffed star cushion: make a second identical star piece.*":
+        "*要做填充式星星抱枕：再钩一片一模一样的星星。*",
+    "*Place the two stars with wrong sides together and line up the 5 points.*":
+        "*两片星星反面相对叠放，把 5 个角对齐。*",
+    "*Join them with sc all the way around the edge, working a bobble (3 sc in the same stitch, then sl st into the first of those 3 sc) at the tip of each point.*":
+        "*沿整个边缘钩短针把两片拼起来，在每个角的尖端钩一个小球（同一针里钩 3 个短针，再引拔回这 3 针的第 1 针）。*",
+    "*Stuff the cushion firmly with fiberfill just before you close the last gap, then fasten off and weave in the ends.*":
+        "*在收掉最后一道口子之前，把抱枕塞满填充棉，然后收针、藏好线头。*",
     "*Use a yarn needle and the long tails you left on each piece.*":
         "*用毛线缝针，配合每片留的长线头进行缝合。*",
 }
@@ -137,6 +156,11 @@ PART_NAMES = {
     "head and body": "头连身体", "stem": "花茎", "leaf": "叶子", "leaves": "叶子",
     "flower": "花朵", "center": "花心", "neck": "脖子", "mane": "鬃毛", "hair": "头发",
     "tentacle": "触手", "tentacles": "触手", "face": "脸", "hand": "手", "hands": "手",
+    "star": "星星", "piece": "单片", "front": "前", "back": "后", "cushion": "抱枕",
+    "pillow": "抱枕", "edge": "边缘", "border": "花边", "bobble": "小球", "ball": "小球",
+    "balls": "小球", "pompom": "毛球", "pom pom": "毛球",
+    "left": "左", "right": "右", "upper": "上", "lower": "下",
+    "middle": "中", "inner": "内", "outer": "外", "side": "侧",
 }
 
 COLORS = {
@@ -155,6 +179,8 @@ POSITIONS = {
     "bottom of body": "身体底部", "sides of head": "头部两侧", "top": "顶部",
     "front": "前面", "back": "后面", "bottom": "底部", "sides": "两侧",
     "body": "身体", "head": "头部", "face": "脸部", "top of head.": "头顶",
+    "edge": "边缘", "along the edge": "沿边缘", "around the edge": "沿边缘",
+    "all around the edge": "沿整个边缘", "center of the star": "星星中心",
 }
 
 # Short labels for the finished-product comparison strip, keyed by the
@@ -234,6 +260,16 @@ def _translate_instruction(s: str) -> str:
     m = re.fullmatch(r"Dec, (.+), dec, ch 1 and turn", s)
     if m:
         return f"减针，{_sc(m.group(1))}，减针，锁 1 针翻面"
+
+    # star points: these rows start AND end with a decrease, so they must be
+    # matched before the generic "Dec, ..., dec, ch 1 and turn" rule above
+    # would otherwise swallow them (or leak English).
+    if s == "Dec, dec, ch 1 and turn":
+        return "减针，减针，锁 1 针翻面"
+    if s == "Dec, sc, ch 1 and turn":
+        return "减针，短针，锁 1 针翻面"
+    if s == "Dec, ch 1 and turn":
+        return "减针，锁 1 针翻面"
 
     m = re.fullmatch(r"Inc, (.+), inc", s)
     if m:
@@ -378,6 +414,20 @@ def _line(line: str) -> str:
     if m:
         body = TIPS.get(m.group(1), m.group(1))
         return f"   *小贴士：{body}*"
+    # ── star (generate_star): dynamic point headers ──
+    m = re.fullmatch(r"\*\*The (\d+) points\*\*", stripped)
+    if m:
+        return f"**{m.group(1)} 个角**"
+    m = re.fullmatch(r"\*\*Point (\d+)\*\*", stripped)
+    if m:
+        return f"**第 {m.group(1)} 个角**"
+    m = re.fullmatch(r"\*Work each point back and forth over its own (\d+) stitches\.\*", stripped)
+    if m:
+        return f"*每个角都用属于它的 {m.group(1)} 针，来回行钩。*"
+    m = re.fullmatch(r"\*Rejoin the yarn in the next (\d+) stitches and work the next point the same way\.\*", stripped)
+    if m:
+        return f"*在接下来的 {m.group(1)} 针里重新接上线，用同样的方法钩下一个角。*"
+
     if stripped.startswith("*") and stripped.endswith("*") and len(stripped) > 2:
         body = stripped[1:-1]
         return "*" + TIPS.get(body, BODY_LINES.get(stripped, body)) + "*"

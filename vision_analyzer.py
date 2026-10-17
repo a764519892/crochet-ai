@@ -30,6 +30,8 @@ SUPPORTED_SHAPES = {
     "petals": "Small loops attached around a circular center (flower petals)",
     "spikes": "Tiny triangular protrusions (dinosaur spikes, hedgehog spines)",
     "bobble": "Round bumps that stick out (frog/bug eyes, textured dots)",
+    "star": "Flat five-pointed star worked in one piece (star cushions, star "
+            "garlands, star coasters, star appliques)",
 }
 
 
@@ -66,7 +68,14 @@ For EACH visible part, identify:
 6. position: where this attaches on the figure (e.g., "top of body", "sides of body", "front of head", "bottom center")
 
 CRITICAL RULES:
-- You MUST list at least 3-5 parts. Most figures have a body, head, AND additional features.
+- FIRST decide what the object is. It may be an amigurumi figure (soft toy
+  with a head, body and limbs) OR a flat / geometric crochet item such as a
+  cushion, pillow, coaster, blanket, garland or decoration.
+- If the object is a flat or geometric item, describe the WHOLE item as ONE
+  part (for example a single "Star" or "Cushion"). Do NOT invent a head,
+  body, arms or legs for something that does not have them.
+- You MUST list at least 1-3 parts. A cushion or a flat decoration legitimately
+  has only ONE part — that is a complete answer, do not pad it.
 - Include ALL visible parts, even tiny details (eyes, nose, beak, feet, wings, tail, markings)
 - Do NOT invent parts you cannot see — only describe what is visible
 - Be precise about colors, noting stripes, patterns, or gradients
@@ -113,11 +122,13 @@ I previously analyzed it and found these parts:
 {parts_summary}
 
 Please check:
-1. Are there VISIBLE parts I missed? (eyes, nose, beak, feet, tail, color markings, accessories?)
-2. Are the colors accurate? Look for stripes, patterns, or color changes I missed.
-3. Are the shape types correct? (Would "oval" fit better than "sphere"? Is a "tapered_tube" better than "cylinder"?)
-4. Are any parts listed that AREN'T actually in the image? Remove those.
-5. Are the positions/attachments correct for assembly?"""
+1. Is this actually a flat / geometric item (cushion, coaster, blanket, star)?
+   If so it should be ONE part — merge any invented head/body/limb parts into it.
+2. Are there VISIBLE parts I missed? (eyes, nose, beak, feet, tail, color markings, accessories?)
+3. Are the colors accurate? Look for stripes, patterns, or color changes I missed.
+4. Are the shape types correct? (Would "oval" fit better than "sphere"? Is a "tapered_tube" better than "cylinder"? Use "star" for a star shape.)
+5. Are any parts listed that AREN'T actually in the image? Remove those.
+6. Are the positions/attachments correct for assembly?"""
 
         if user_text:
             prompt += f"""
@@ -215,6 +226,16 @@ Return ONLY valid JSON, no other text:
             "raw_parts": parts,
             "pattern_data": pattern_data,
         }
+
+    def pattern_data_from_parts(self, parts):
+        """Build engine-ready pattern data from a hand-written parts list.
+
+        Runs exactly the same validation + conversion as the AI path, so a
+        manually corrected parts list behaves identically to a detected one.
+        Useful when the local vision model misreads an image.
+        """
+        parts = self._validate_parts(list(parts))
+        return self._convert_to_pattern_format(parts)
 
     def _parse_json_response(self, response_text):
         """
@@ -320,8 +341,22 @@ Return ONLY valid JSON, no other text:
             if size not in ("tiny", "small", "medium", "large"):
                 size = "medium"
 
+            # The vision model sometimes returns count as a string ("2"), a
+            # float, or a junk value. Coerce it here: a non-integer count used
+            # to crash the whole pipeline on `count > 1`.
             count = part.get("count", 1)
+            try:
+                count = int(float(count))
+            except (TypeError, ValueError):
+                count = 1
+            if count < 1:
+                count = 1
+
             part_type = part.get("type", "sphere")
+            # Tolerate shape names the model invents (e.g. "five_point_star",
+            # "flat_star", "5-point star") for an otherwise supported shape.
+            if "star" in str(part_type).lower():
+                part_type = "star"
             position = part.get("position", "")
             color = self._clean_color(part.get("color", "Unknown"), part.get("name", "Part"))
 
@@ -432,6 +467,15 @@ Return ONLY valid JSON, no other text:
             elif part_type == "bobble":
                 base.update({"type": "bobble", "size": size})
 
+            elif part_type == "star":
+                base.update({
+                    "type": "star",
+                    "points": 5,
+                    # A star needs more rounds than a tube/ball to read as a
+                    # star: the base disc plus the 5 points is the whole piece.
+                    "base_rounds": {"tiny": 4, "small": 5, "medium": 7, "large": 10}[size],
+                })
+
             else:
                 print(f"[Warning] Unknown shape '{part_type}' for '{part_name}', defaulting to sphere")
                 base.update({
@@ -451,8 +495,14 @@ Return ONLY valid JSON, no other text:
         so the pattern isn't missing its biggest piece.
         """
         body_keywords = {"body", "torso", "main body", "head & body", "head and body"}
+        # Flat / geometric items ARE their own main piece — never bolt a
+        # default "Body" onto a star cushion or a coaster.
+        flat_keywords = ("star", "cushion", "pillow", "coaster", "blanket",
+                         "potholder", "placemat", "doily")
         has_body = any(
             p.get("name", "").lower().split(" (make")[0].strip() in body_keywords
+            or p.get("type") == "star"
+            or any(k in p.get("name", "").lower() for k in flat_keywords)
             for p in parts
         )
 

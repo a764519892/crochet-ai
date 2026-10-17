@@ -165,7 +165,7 @@ class BeginnerPatternGenerator:
                         pdf.image(image_path, x=(pdf.w - img_w) / 2, w=img_w)
                         pdf.ln(3)
                         pdf.set_font(family, "", 9)
-                        pdf.write(5, "（成品效果图 · finished product preview）")
+                        pdf.write(5, "（成品效果图）")
                         pdf.ln(10)
                         image_done = True
                     except Exception as exc:  # pragma: no cover - defensive
@@ -180,7 +180,7 @@ class BeginnerPatternGenerator:
                         pdf.image(compare_image_path, x=(pdf.w - cmp_w) / 2, w=cmp_w)
                         pdf.ln(3)
                         pdf.set_font(family, "", 8)
-                        pdf.write(4, "以上四张为同一个玩偶、同一种子渲染，仅毛线粗细不同："
+                        pdf.write(4, "以上几张为同一件成品、同一个随机种子渲染，仅毛线粗细不同："
                                      "线越粗、钩针越大，成品越大、针迹越粗。")
                         pdf.ln(10)
                         compare_done = True
@@ -315,6 +315,8 @@ class BeginnerPatternGenerator:
             return self.generate_spikes(name, color, part["num_spikes"])
         elif t == "bobble":
             return self.generate_bobble(name, color, part.get("size", "medium"))
+        elif t == "star":
+            return self.generate_star(name, color, part.get("base_rounds", 6), part.get("points", 5))
         else:
             return self.generate_sphere(name, color, 18, 3)
 
@@ -819,6 +821,74 @@ class BeginnerPatternGenerator:
         pattern.append("\n**Finish:** Fasten off leaving a long tail. Stuff lightly before sewing.\n")
         return "\n".join(pattern)
 
+    def generate_star(self, name, color, base_rounds=6, points=5):
+        """Flat five-pointed star worked in ONE piece (no separate points to sew).
+
+        A flat base is worked in continuous rounds with the stitches split into
+        `points` equal sections; each section is then worked back and forth to
+        form one point. Make two identical pieces and join them for a stuffed
+        cushion, or leave it flat for a garland / coaster / applique.
+        """
+        try:
+            base_rounds = int(base_rounds)
+            points = int(points)
+        except (TypeError, ValueError):
+            base_rounds, points = 6, 5
+        base_rounds = max(3, min(base_rounds, 10))
+        points = max(3, min(points, 8))
+
+        pattern = []
+        pattern.append(f"### {name.upper()} (Use {color} yarn)")
+        pattern.append("*This piece is a flat five-pointed star worked in one piece. Do not stuff it.*")
+        pattern.append("*You will make 2 identical star pieces and join them later to make a cushion.*\n")
+
+        # ── Rounds 1..N: a flat base split into `points` equal sections ──
+        current = points
+        pattern.append(self.format_round(1, f"{points} sc in a magic ring", current))
+        for rnd in range(2, base_rounds + 1):
+            if rnd == 2:
+                instr = f"{points} inc"
+            else:
+                instr = f"[{self._fmt_sc(rnd - 2)}, inc] x {points}"
+            current = points * rnd
+            pattern.append(self.format_round(rnd, instr, current))
+        pattern.append("*This base is the middle of the star — the 5 points grow out of it.*")
+
+        # ── The points: each is worked back and forth, then we slip stitch
+        #    back down its side and move on to the next one. ──
+        per_point = current // points
+        pattern.append(f"\n**The {points} points**")
+        pattern.append(f"*Work each point back and forth over its own {per_point} stitches.*")
+
+        for p in range(1, points + 1):
+            pattern.append(f"\n**Point {p}**")
+            n = per_point
+            row = 1
+            pattern.append(self.format_row(row, f"{self._fmt_sc(n)}, ch 1 and turn", n))
+            while n > 1:
+                if n >= 5:
+                    instr, nxt = f"Dec, {self._fmt_sc(n - 4)}, dec, ch 1 and turn", n - 2
+                elif n == 4:
+                    instr, nxt = "Dec, dec, ch 1 and turn", 2
+                elif n == 3:
+                    instr, nxt = "Dec, sc, ch 1 and turn", 2
+                else:  # n == 2
+                    instr, nxt = "Dec, ch 1 and turn", 1
+                row += 1
+                pattern.append(self.format_row(row, instr, nxt))
+                n = nxt
+            pattern.append("*Fasten off, then slip stitch down the side of this point back to the base.*")
+            if p < points:
+                pattern.append(f"*Rejoin the yarn in the next {per_point} stitches and work the next point the same way.*")
+
+        pattern.append("\n**Finish:** Fasten off leaving a long tail for sewing.\n")
+        pattern.append("*To make a flat star (garland, coaster, applique): fasten off and weave in all the ends — you are done.*")
+        pattern.append("*To make a stuffed star cushion: make a second identical star piece.*")
+        pattern.append("*Place the two stars with wrong sides together and line up the 5 points.*")
+        pattern.append("*Join them with sc all the way around the edge, working a bobble (3 sc in the same stitch, then sl st into the first of those 3 sc) at the tip of each point.*")
+        pattern.append("*Stuff the cushion firmly with fiberfill just before you close the last gap, then fasten off and weave in the ends.*\n")
+        return "\n".join(pattern)
+
     # ──────────────────────────────────────────────
     #  ASSEMBLY SECTION
     # ──────────────────────────────────────────────
@@ -828,13 +898,20 @@ class BeginnerPatternGenerator:
         Generate assembly instructions based on the parts list.
         Uses the 'position' field from each part to explain where to sew things.
         """
-        # Filter out parts that are likely the main body (nothing to attach)
+        # Filter out parts that are the main piece (nothing to attach them to).
+        # A star is complete on its own: a star cushion is joined to a second
+        # star, it is not sewn onto a body.
         body_names = {"body", "head & body", "head and body", "main body"}
         attachable_parts = []
         for part in pattern_data:
             name_lower = part.get("name", "").lower().split(" (make")[0].strip()
-            if name_lower not in body_names:
-                attachable_parts.append(part)
+            if part.get("type") == "star":
+                continue
+            if name_lower in body_names:
+                continue
+            if "star" in name_lower or "cushion" in name_lower or "pillow" in name_lower:
+                continue
+            attachable_parts.append(part)
 
         if not attachable_parts:
             return ""

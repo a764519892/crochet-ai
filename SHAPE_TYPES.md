@@ -152,18 +152,54 @@ This document explains all the shape types our AI system can recognize and gener
 
 ---
 
+### 9. **STAR** (Flat Five-Pointed Star) ✨ NEW!
+**Best for:** Star cushions/pillows, star garlands, coasters, appliques, Christmas decorations
+
+**How it works:**
+- The base is a flat disc worked in **continuous rounds**, split into 5 equal
+  sections (`5 sc` in the ring, then `+5` stitches every round) — so every
+  round has a multiple of 5 stitches
+- Each of the 5 sections is then worked **back and forth in rows** to form one
+  point (`Dec, N sc, dec` each row, down to 1 stitch)
+- After a point is finished you slip stitch back down its side to the base and
+  work the next point in the next group of stitches
+- **No sewing the points on** — the whole star is one piece
+
+**Size mapping:** `tiny` 4 base rounds (20 sts, 4 per point) · `small` 5 (25 sts) ·
+`medium` 7 (35 sts) · `large` 10 (50 sts, 10 per point)
+
+**Example uses:**
+- Star cushion / pillow (make **2** pieces, join them with sc around the edge,
+  working a bobble at each point tip, and stuff before closing)
+- Star garland or bunting (make 1 piece per star, leave flat)
+- Star coaster / applique
+
+**Pro tip:** For a cushion, the second piece is identical — hook 2 with the same
+count so the points line up when you join them.
+
+---
+
 ## 🎨 How the AI Chooses Shape Types
 
 When you upload an image, our AI (llava model) looks at each component and asks:
 
-1. **Is it round?** → Sphere
-2. **Is it a tube/column?** → Cylinder  
-3. **Does it taper to a point?** → Cone
-4. **Is it flat and simple?** → Flat_leaf
-5. **Is it organic/heart-shaped?** → Heart_leaf
-6. **Does it have jagged/pointed edges like a wing?** → Wing
-7. **Are there small loops around a circle?** → Petals
-8. **Are there tiny triangular bumps?** → Spikes
+1. **Is the whole object flat or geometric (cushion, coaster, blanket)?** → one
+   part only (do not invent a head and body for something that has none)
+2. **Is it round?** → Sphere
+3. **Is it a tube/column?** → Cylinder  
+4. **Does it taper to a point?** → Cone
+5. **Is it flat and simple?** → Flat_leaf
+6. **Is it organic/heart-shaped?** → Heart_leaf
+7. **Does it have jagged/pointed edges like a wing?** → Wing
+8. **Are there small loops around a circle?** → Petals
+9. **Are there tiny triangular bumps?** → Spikes
+10. **Is it a star?** → Star
+
+**The local vision model is not perfect on flat items.** It tends to read a star
+cushion as a creature with a head and a body. If that happens, either fix the
+parts in the web **review UI** or write the parts yourself in a JSON file and use
+`image_to_pattern.py --parts parts.json` (see the README). The engine does not
+care where the parts came from.
 
 ## 🧠 Size Mapping
 
@@ -188,6 +224,12 @@ The AI identifies size as "small", "medium", or "large" and our system converts 
 - Small: 6 petals
 - Medium: 8 petals
 - Large: 12 petals
+
+### Star
+- Tiny: 4 base rounds (20 sts, 4 per point)
+- Small: 5 base rounds (25 sts, 5 per point)
+- Medium: 7 base rounds (35 sts, 7 per point)
+- Large: 10 base rounds (50 sts, 10 per point)
 
 ## 📚 Pattern Structure
 
@@ -229,9 +271,8 @@ Potential future shape types:
 - **Ruffle**: Gathered fabric effect
 - **Spiral**: Twisted shapes
 - **Shell**: Scalloped edges
-- **Bobble**: Textured bumps
 - **Granny Square**: Flat square motifs
 
 ---
 
-**Current Capabilities:** 8 shape types covering 90%+ of amigurumi patterns!
+**Current Capabilities:** 10 shape types covering 90%+ of amigurumi patterns!

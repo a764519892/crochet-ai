@@ -10,10 +10,10 @@ The generator itself is not hosted. Clone this repo and run it on your machine.
 
 - Image and/or text in
 - Review UI so you can edit detected parts before writing
-- Eight+ shape families (sphere, cylinder, cone, leaves, wings, petals, spikes, …)
+- Ten+ shape families (sphere, cylinder, cone, star, leaves, wings, petals, spikes, …)
 - Beginner PDF with **Chinese** terms (short/inc/dec, round counts) and assembly
 - **Finished-product preview image** (optional, rendered locally with ComfyUI + SD/FLUX)
-- CLI for batch use
+- CLI for batch use, including a hand-written parts file (`--parts`)
 
 The pattern document is Chinese by default (`zh`). Set `CROCHET_LANG=en` for the original
 English wording.
@@ -71,6 +71,36 @@ python3 image_to_pattern.py path/to/image.jpg "Cute Dragon" "blue dragon, ignore
 
 Writes `<Name>_Pattern.pdf` next to where you run it. Needs the same local model as the web app
 (`ollama serve` running and `llava` installed).
+
+#### Writing the parts yourself (`--parts`)
+
+The local vision model is not reliable on every photo — it often reads a flat
+item (a star cushion, a coaster, a blanket) as a creature with a head and arms.
+That is exactly what the web **review UI** is for. On the CLI you can do the same
+thing by writing the parts into a JSON file and skipping the model:
+
+```bash
+python3 image_to_pattern.py --parts examples/star_pillow.parts.json "Star_Pillow"
+```
+
+`parts.json` is either a JSON array of parts or `{"creature_type": ..., "parts": [...]}`.
+Part fields are the same vocabulary the vision model emits:
+
+```json
+{
+  "creature_type": "star cushion",
+  "parts": [
+    {"type": "star", "name": "Star Piece", "color": "pink",
+     "size": "large", "count": 2, "position": ""}
+  ]
+}
+```
+
+`type` is one of `sphere`, `oval`, `cylinder`, `cone`, `dome`, `flat_circle`,
+`flat_leaf`, `tapered_tube`, `fan`, `bird_feet`, `heart_leaf`, `wing`, `petals`,
+`spikes`, `bobble`, `star`. `name`, `color` and `position` are free text, `size`
+is `tiny`/`small`/`medium`/`large` and `count` is how many to make. Conversion is
+the same code the AI path uses, so the output is identical in shape.
 
 ### 5. Finished-product image (optional — needs ComfyUI)
 
@@ -163,6 +193,9 @@ photo and/or text
  PDF
 ```
 
+(Or skip the model entirely: `image_to_pattern.py --parts parts.json` goes
+straight from your own parts list to the same engine.)
+
 Shape notes: [SHAPE_TYPES.md](SHAPE_TYPES.md)
 
 ## Project layout
@@ -171,14 +204,25 @@ Shape notes: [SHAPE_TYPES.md](SHAPE_TYPES.md)
 app.py                 Flask app (localhost:5001)
 pattern_engine.py      Round-by-round writing
 pattern_i18n.py        English -> Chinese translation of the document
-image_generator.py     Finished-product image via local ComfyUI (FLUX)
+image_generator.py     Finished-product image via local ComfyUI (SD / FLUX)
 vision_analyzer.py     Ollama vision
-image_to_pattern.py    CLI
+image_to_pattern.py    CLI (photo, or --parts for a hand-written parts list)
+examples/              example parts JSON (see --parts in the README)
 templates/index.html   Desk UI
 static/studio.css      Shared look
 docs/                  GitHub Pages product page
 requirements.txt
 ```
+
+## Tests
+
+```bash
+python3 test_patterns.py
+```
+
+Runs five full projects through the engine and checks every round/row against
+the stitch maths (including the star shape and a count returned as a string).
+Expect `5 passed, 0 failed`.
 
 ## Tips
 
@@ -195,6 +239,10 @@ Useful notes: “blue octopus, eight legs”, “ignore the branch”, “small 
 **Port 5001 busy** — change `port=` at the bottom of `app.py`.
 
 **Pattern is off** — try another angle, or add notes, then edit parts in the review step.
+
+**It saw a creature that isn't there** — the local model is weak on flat items
+(cushions, coasters, blankets, stars). Fix the part list in the review UI, or
+write it yourself and use `image_to_pattern.py --parts parts.json`.
 
 ## License
 

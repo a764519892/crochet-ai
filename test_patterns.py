@@ -1,12 +1,14 @@
 """
-Test script: Runs 4 different creature patterns through the pattern engine
+Test script: Runs 5 different projects through the pattern engine
 and validates that the stitch math is correct.
 
 Tests:
-  1. Cat   - sphere head, oval body, cone ears, cylinder legs, tapered_tube tail
-  2. Flower - flat_circle center, petals, cylinder stem, flat_leaf leaves
-  3. Dinosaur - sphere head, oval body, cylinder legs, spikes, tapered_tube tail
-  4. Jellyfish - dome head, cylinder tentacles, bobble eyes
+  1. Frog    - oversized oval eyes → flat_circle; garbled colour phrases
+  2. Owl     - list positions, sphere eyes downsized
+  3. Penguin - narrative colour descriptions
+  4. Dragon  - all fixes combined (missing body, list positions, eyes, colours)
+  5. Star cushion - the "star" shape (rounds base + 5 row-worked points) and a
+                    count returned as a STRING ("2"), which used to crash
 
 For each pattern, we:
   - Generate the full pattern text
@@ -100,6 +102,14 @@ TEST_CREATURES = {
          "count": 6, "position": "along the back from head to tail"},
         {"type": "cylinder", "name": "Leg", "color": "Dark green similar to the body", "size": "small",
          "count": 4, "position": "bottom of body"},
+    ],
+
+    # A flat star cushion is ONE piece worked in rounds + rows. Also covers the
+    # crash fix for a count returned as a string ("2" instead of 2), which the
+    # vision model does regularly.
+    "Star cushion (flat star + string count)": [
+        {"type": "star", "name": "Star Piece", "color": "Pink", "size": "medium",
+         "count": "2", "position": ""},
     ],
 }
 
@@ -241,11 +251,14 @@ def validate_round_based_pattern(pattern_text, part_name):
     return rounds_checked, issues
 
 
-def validate_row_based_pattern(pattern_text, part_name):
+def validate_row_based_pattern(pattern_text, part_name, strict_consumption=False):
     """
     Validate row-based (flat) pieces. These are harder to simulate
     because they use chains, turns, and increases on edges.
     We check what we can.
+
+    strict_consumption adds the star-point check: every row must consume
+    exactly the stitch count the previous row ended with.
     """
     issues = []
     rows_checked = 0
@@ -266,6 +279,36 @@ def validate_row_based_pattern(pattern_text, part_name):
             continue
 
         rows_checked += 1
+
+        if strict_consumption:
+            # Star points: "Dec, N sc, dec" / "Dec, dec" / "Dec, sc" / "Dec".
+            # Each is worked over the previous row and shrinks at both ends.
+            consumed = expected = None
+            m = re.match(r"Dec,\s*(\d+\s+sc|sc),\s*dec,\s*ch 1 and turn$", instruction)
+            if m:
+                inner = int(m.group(1).split()[0]) if m.group(1)[0].isdigit() else 1
+                consumed, expected = inner + 4, inner + 2
+            elif re.fullmatch(r"Dec, dec, ch 1 and turn", instruction):
+                consumed, expected = 4, 2
+            elif re.fullmatch(r"Dec, sc, ch 1 and turn", instruction):
+                consumed, expected = 3, 2
+            elif re.fullmatch(r"Dec, ch 1 and turn", instruction):
+                consumed, expected = 2, 1
+
+            if consumed is not None:
+                if consumed != current_stitches:
+                    issues.append(
+                        f"  MISMATCH Row {row_num}: '{instruction}' consumes "
+                        f"{consumed} stitches but the previous row ended with "
+                        f"{current_stitches}"
+                    )
+                if expected != stated_count:
+                    issues.append(
+                        f"  MISMATCH Row {row_num}: '{instruction}' should leave "
+                        f"{expected} stitches but pattern says ({stated_count})"
+                    )
+                current_stitches = stated_count
+                continue
 
         # Row 2 of chain-start pieces: "Sc in 2nd ch from hook, N sc" = chain - 1
         ch_start = re.match(r"Sc in 2nd ch from hook,\s*(\d+)\s+sc", instruction)
@@ -329,6 +372,9 @@ def check_has_body(pattern_data):
         name_lower = part.get("name", "").lower()
         if any(kw in name_lower for kw in body_keywords):
             return True
+        # A flat star is its own main piece (a cushion has no separate body).
+        if part.get("type") == "star":
+            return True
     return False
 
 
@@ -364,7 +410,11 @@ def run_test(creature_name, raw_parts):
 
     print(f"\n  Parts from AI: {len(raw_parts)}")
     for p in raw_parts:
-        count_str = f" (x{p['count']})" if p.get("count", 1) > 1 else ""
+        try:
+            cnt = int(p.get("count", 1))
+        except (TypeError, ValueError):
+            cnt = 1
+        count_str = f" (x{cnt})" if cnt > 1 else ""
         print(f"    - {p['name']}{count_str}: {p['type']} / {p['size']}")
 
     print(f"  Parts after validation+conversion: {len(pattern_data)}")
@@ -444,7 +494,13 @@ def run_test(creature_name, raw_parts):
         part_name = part["name"]
         part_type = part["type"]
 
-        if part_type in ("flat_leaf", "fan", "wing", "heart_leaf"):
+        if part_type == "star":
+            # A star has BOTH: the flat base is rounds, the 5 points are rows.
+            c1, i1 = validate_round_based_pattern(part_pattern, part_name)
+            c2, i2 = validate_row_based_pattern(part_pattern, part_name,
+                                                strict_consumption=True)
+            checked, issues = c1 + c2, i1 + i2
+        elif part_type in ("flat_leaf", "fan", "wing", "heart_leaf"):
             checked, issues = validate_row_based_pattern(part_pattern, part_name)
         elif part_type in ("petals", "bird_feet"):
             print(f"\n  [{part_name}] ({part_type}) - Skipping: procedural instructions, no stitch counts to validate")

@@ -1,0 +1,14 @@
+{
+  "_comment": "Example parts list: a pink five-pointed star cushion (photos/star_pillow.jpg). The local vision model misreads this kind of photo as a creature with a head and a body, so the parts are written by hand and passed with --parts. Make 2 star pieces, then join them with a bobble edge and stuff.",
+  "creature_type": "star cushion",
+  "parts": [
+    {
+      "type": "star",
+      "name": "Star Piece",
+      "color": "pink",
+      "size": "large",
+      "count": 2,
+      "position": ""
+    }
+  ]
+}

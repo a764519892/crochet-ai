@@ -68,7 +68,7 @@
   .note{font-size:12px; color:var(--ink-soft);}
 
   /* shapes */
-  .shapes{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  .shapes{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
   .shape{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 8px; text-align:center;}
   .shape svg{display:block; margin:0 auto 6px;}
   .shape b{font-size:11.5px; display:block;}
@@ -127,7 +127,7 @@
         <div class="body">
           <div class="chip"><b>vision_analyzer.py</b><span>class VisionAnalyzer</span></div>
           <div class="chip"><b>两轮分析</b><span>第 1 轮识别 → 第 2 轮自我纠错</span></div>
-          <div class="chip"><b>15 种形状</b><span>把 AI 结果归一化成引擎格式</span></div>
+          <div class="chip"><b>16 种形状</b><span>把 AI 结果归一化成引擎格式</span></div>
           <div class="chip"><b>Ollama</b><span>本地模型服务 127.0.0.1:11434（默认 llava）</span></div>
         </div>
       </div>
@@ -147,7 +147,7 @@
         <div class="body">
           <div class="chip"><b>pattern_engine.py</b><span>class BeginnerPatternGenerator</span></div>
           <div class="chip"><b>pattern_i18n.py</b><span>把英文图解翻成中文</span></div>
-          <div class="chip"><b>形状生成器</b><span>球/椭圆/圆柱/圆锥…逐个生成圈数</span></div>
+          <div class="chip"><b>形状生成器</b><span>球/椭圆/圆柱/圆锥/星星…逐个生成圈数</span></div>
           <div class="chip"><b>fpdf2 + SimHei</b><span>中文排版成 PDF（需嵌入中文字体）</span></div>
         </div>
       </div>
@@ -155,7 +155,8 @@
         <div class="tag t-cli">命令行</div>
         <div class="body">
           <div class="chip"><b>image_to_pattern.py</b><span>图片 → 图解 PDF 的批量 CLI</span></div>
-          <div class="chip"><b>test_patterns.py</b><span>测试：模拟针数、校验数学</span></div>
+          <div class="chip"><b>--parts 手写部件</b><span>AI 看错时，自己写部件表出图</span></div>
+          <div class="chip"><b>test_patterns.py</b><span>测试：模拟针数、校验数学（5 项）</span></div>
         </div>
       </div>
     </div>
@@ -220,14 +221,18 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
         <pre>python app.py   <span class="c"># 打开 http://localhost:5001</span></pre>
         <p>流程：放照片 → Analyze → 复核部件 → Generate pattern → 下载 PDF。</p></div></li>
       <li><div class="txt"><b>（可选）命令行批量</b>
-        <pre>python image_to_pattern.py 图片.jpg "Cute Dragon"</pre></div></li>
+        <pre>python image_to_pattern.py 图片.jpg "Cute Dragon"
+
+<span class="c"># AI 看错了？自己写部件表，跳过视觉模型：</span>
+python image_to_pattern.py --parts 部件.json "Star_Pillow"</pre></div></li>
     </ol>
   </section>
 
   <!-- 4. SHAPES -->
   <section>
-    <h2><span class="n">04</span>图案引擎支持的 15 种形状</h2>
+    <h2><span class="n">04</span>图案引擎支持的 16 种形状</h2>
     <div class="shapes">
+      <div class="shape"><svg width="34" height="34"><polygon points="17,2 20.7,11.9 31.3,12.4 23,19 25.8,29.1 17,23.3 8.2,29.1 11,19 2.7,12.4 13.3,11.9" fill="#d99a3a"/></svg><b>五角星</b><span>star · 抱枕/挂饰</span></div>
       <div class="shape"><svg width="34" height="34"><circle cx="17" cy="17" r="13" fill="#d99a3a"/></svg><b>球体</b><span>sphere · 头/身/眼</span></div>
       <div class="shape"><svg width="34" height="34"><ellipse cx="17" cy="17" rx="11" ry="14" fill="#c2624a"/></svg><b>椭圆</b><span>oval · 鸟身</span></div>
       <div class="shape"><svg width="34" height="34"><rect x="10" y="4" width="14" height="26" rx="7" fill="#7d9080"/></svg><b>圆柱</b><span>cylinder · 腿/臂</span></div>
@@ -256,8 +261,8 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
       <div class="check"><span class="dot ok"></span>Flask 网页服务<span class="v">HTTP 200 ✔</span></div>
       <div class="check"><span class="dot ok"></span>中文图解 + PDF（嵌入 SimHei）<span class="v">✔</span></div>
       <div class="check"><span class="dot ok"></span>ComfyUI + SD 1.5 模型（出成品图）<span class="v">8188 · LOW_VRAM ✔</span></div>
-      <div class="check"><span class="dot ok"></span>单元自测 test_patterns.py<span class="v">4 passed / 0 failed ✔</span></div>
-      <div class="check"><span class="dot ok"></span>15 种形状中文图解全量验证<span class="v">✔ 无漏译</span></div>
+      <div class="check"><span class="dot ok"></span>单元自测 test_patterns.py<span class="v">5 passed / 0 failed ✔</span></div>
+      <div class="check"><span class="dot ok"></span>16 种形状中文图解全量验证<span class="v">✔ 无漏译</span></div>
     </div>
     <p class="note" style="margin-top:10px;">说明：本机为 RTX 3060 Laptop（6GB 显存 / 16GB 内存）。原装的 FLUX fp8（主模型 11GB + 文本编码器 4.5GB ≈ 15.6GB）<b>超出 16GB 内存上限</b>，加载必崩；故成品图改用 <b>SD 1.5</b> 模型（约 2GB，内存占用约 4GB），ComfyUI 以 <code>--lowvram</code> 启动，单张约数秒。可用 <code>CROCHET_NO_IMAGE=1</code> 跳过成品图。</p>
   </section>
@@ -268,9 +273,11 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
     <div style="display:flex; gap:18px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;">
       <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
       <div style="font-size:13px;">
+        <p style="margin-bottom:8px;"><b>示例：粉色五角星抱枕</b>（<code>star</code> 形状，一整片钩成，5 个角从圆底长出来；钩 2 片缝合、边缘钩小球、塞棉）。</p>
         <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 + <b>你选的毛线粗细（4 股牛奶棉 · 2.0–2.5mm）</b> → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA（0.35）</b> 文生图 → 得到成品效果图。</p>
         <p style="margin-bottom:8px;">成品图 + <b>四档毛线粗细的对比图</b>，都<b>嵌进 PDF 首页</b>——买线的人可以直接对比着挑一种线，照着钩。</p>
         <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；毛线粗细在图解页「Yarn / hook」下拉里选，会同时写进 PDF 材料和图片提示词；LoRA 自动识别（文件名含 crochet/amigurumi/knit 等即启用），强度用 <code>COMFY_LORA_STRENGTH</code> 调（现为 0.35），<code>COMFY_LORA=none</code> 可关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
+        <p class="note"><b>扁平物要注意：</b>本机视觉模型容易把抱枕、杯垫、毯子看成「有头有身体的动物」。要么在网页的复核界面改部件，要么自己写部件表用 <code>image_to_pattern.py --parts 部件.json</code>——引擎不关心部件是谁给的。这张星星抱枕就是这么出的。</p>
       </div>
     </div>
     <figure style="margin:16px 0 0; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px 12px;">

@@ -7,6 +7,9 @@ __pycache__/
 .env
 uploads/
 generated_patterns/
+# user photos / outputs kept on disk but never committed
+photos/
+out/
 # generated finished-product previews (the poster's diagrams/preview.png is tracked)
 *_preview*.png
 .idea/

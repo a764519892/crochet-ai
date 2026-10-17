@@ -179,22 +179,39 @@ def build_product_prompt(pattern_data, title="amigurumi", yarn=None):
     `yarn` is a pattern_engine YARN_PRESETS key (None = the configured default),
     which pins the yarn thickness the render should show.
     """
-    names, colors = [], []
+    names, colors, types = [], [], []
     for p in pattern_data or []:
         if not isinstance(p, dict):
             continue
         n = str(p.get("name") or "").strip()
         c = str(p.get("color") or "").strip()
+        t = str(p.get("type") or "").strip()
         if n:
             names.append(n)
         if c:
             colors.append(c)
+        if t:
+            types.append(t)
 
     animal = title.replace("_", " ").strip() or "cute animal"
     parts = ", ".join(dict.fromkeys(names))[:200]
     col = ", ".join(dict.fromkeys(colors))[:120]
 
-    prompt = f"A crochet amigurumi {animal} made of yarn"
+    # A star cushion / blanket / coaster is a flat piece, not a standing toy:
+    # saying "amigurumi ... standing" made the model render the wrong thing.
+    blob = (f"{animal} {' '.join(names)}").lower()
+    is_star = "star" in types or "star" in blob
+    is_flat = is_star or any(w in blob for w in (
+        "cushion", "pillow", "coaster", "blanket", "potholder", "placemat",
+        "garland", "doily"))
+    if is_star:
+        subject = "A crochet five-pointed star cushion made of yarn"
+    elif is_flat:
+        subject = f"A crochet {animal} made of yarn"
+    else:
+        subject = f"A crochet amigurumi {animal} made of yarn"
+
+    prompt = subject
     if col:
         prompt += f", colors: {col}"
     if parts:
@@ -202,7 +219,16 @@ def build_product_prompt(pattern_data, title="amigurumi", yarn=None):
     phrase = yarn_phrase(yarn)
     if phrase:
         prompt += f", {phrase}"
-    return f"{prompt}. {SD_STYLE}"
+
+    style = SD_STYLE
+    if is_flat:
+        style = (style
+                 .replace("standing on a plain light grey surface",
+                          "lying flat on a plain light grey surface")
+                 .replace("handmade crochet amigurumi toy made of yarn",
+                          "handmade crochet item made of yarn")
+                 .replace("cute kawaii design", "cute design"))
+    return f"{prompt}. {style}"
 
 
 # --------------------------------------------------------------------------- #
