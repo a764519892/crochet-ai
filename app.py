@@ -114,21 +114,28 @@ def generate():
         # Convert markdown to HTML for preview
         html_pattern = markdown_to_html(full_pattern)
 
-        # Optional finished-product preview image (local ComfyUI)
+        # Optional finished-product preview image (local ComfyUI).
+        # Renders the product once per yarn thickness so the PDF can show a
+        # comparison strip and the reader can choose a yarn.
         image_path = None
+        compare_image_path = None
         image_url = None
         creature_type = data.get('creature_type') or ''
-        if data.get('generate_image', True):
+        if data.get('generate_image', True) and not os.environ.get('CROCHET_NO_IMAGE'):
             try:
                 import image_generator
                 if image_generator.available():
-                    prompt = image_generator.build_product_prompt(
-                        pattern_data, creature_type or pattern_name, yarn=yarn)
-                    img_name = f"{secure_filename(pattern_name)}_preview.png"
-                    image_path = os.path.join('generated_patterns', img_name)
-                    print("[GENERATE] image prompt:", prompt)
-                    if image_generator.generate(prompt, image_path):
-                        image_url = f'/preview/{img_name}'
+                    prefix = f"{secure_filename(pattern_name)}_preview"
+                    print("[GENERATE] rendering finished-product image per yarn thickness...")
+                    res = image_generator.render_yarn_variants(
+                        pattern_data, creature_type or pattern_name,
+                        out_dir='generated_patterns', prefix=prefix,
+                        selected=yarn)
+                    image_path = res.get('hero')
+                    compare_image_path = res.get('compare')
+                    if image_path:
+                        image_url = f'/preview/{os.path.basename(image_path)}'
+                        print("[GENERATE] hero image:", image_path)
                     else:
                         image_path = None
                 else:
@@ -136,16 +143,20 @@ def generate():
             except Exception as exc:
                 print("[GENERATE] preview image skipped:", exc)
                 image_path = None
+                compare_image_path = None
 
         # Generate PDF (with the preview image embedded when available)
         pdf_filename = f"{pattern_name}_Pattern.pdf"
         pdf_path = os.path.join('generated_patterns', pdf_filename)
-        engine.save_to_pdf(pdf_path, full_pattern, image_path=image_path)
+        engine.save_to_pdf(pdf_path, full_pattern, image_path=image_path,
+                           compare_image_path=compare_image_path)
 
         return jsonify({
             'preview': html_pattern,
             'pdf_url': f'/download/{pdf_filename}',
             'image_url': image_url,
+            'compare_url': (f'/preview/{os.path.basename(compare_image_path)}'
+                            if compare_image_path else None),
         })
     
     except Exception as e:

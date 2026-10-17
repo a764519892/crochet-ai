@@ -369,6 +369,106 @@ def generate(prompt, out_path, negative=None, width=None, height=None,
     return None
 
 
+# --------------------------------------------------------------------------- #
+# Yarn-thickness comparison
+# --------------------------------------------------------------------------- #
+def _montage(paths, out_path, labels):
+    """Lay per-yarn renders side by side with a Chinese label bar on top."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        print("[image] Pillow not available; skipping the comparison strip")
+        return None
+
+    items = [(k, p) for k, p in paths.items() if os.path.exists(p)]
+    if len(items) < 2:
+        return None
+
+    ims = [(k, Image.open(p).convert("RGB")) for k, p in items]
+    w, h = ims[0][1].size
+    bar = max(36, h // 13)
+    fs = int(bar * 0.52)
+
+    sheet = Image.new("RGB", (w * len(ims), h + bar), (250, 246, 240))
+    draw = ImageDraw.Draw(sheet)
+
+    font = None
+    try:
+        from pattern_engine import BeginnerPatternGenerator
+        fp = BeginnerPatternGenerator._find_cjk_font()
+        if fp:
+            font = ImageFont.truetype(fp, fs)
+    except Exception:
+        pass
+    if font is None:
+        font = ImageFont.load_default()
+
+    for i, (key, im) in enumerate(ims):
+        sheet.paste(im, (i * w, bar))
+        label = labels.get(key, key)
+        try:
+            tw = draw.textlength(label, font=font)
+        except Exception:
+            tw = draw.textlength(label)
+        draw.text((i * w + (w - tw) / 2, (bar - fs) / 2 - 1),
+                  label, fill=(60, 50, 45), font=font)
+        if i:
+            draw.line([(i * w, 0), (i * w, h + bar)], fill=(222, 213, 203), width=2)
+
+    sheet.save(out_path)
+    print(f"[image] saved comparison strip {out_path} ({sheet.size[0]}x{sheet.size[1]})")
+    return out_path
+
+
+def render_yarn_variants(pattern_data, title="amigurumi", out_dir="generated_patterns",
+                         prefix="preview", yarns=None, selected=None, seed=None):
+    """Render the same finished product once per yarn thickness.
+
+    Every render shares one seed, so the only difference between them is the
+    yarn thickness described in the prompt - which is what makes the resulting
+    strip a fair "choose your yarn" comparison.
+
+    Returns {"by_yarn": {key: path}, "compare": path|None, "hero": path|None}.
+    `hero` is the render of the selected yarn (that is the one embedded as the
+    main preview image).
+    """
+    try:
+        from pattern_engine import YARN_PRESETS, DEFAULT_YARN
+    except Exception as exc:
+        print("[image] cannot import yarn presets:", exc)
+        return {"by_yarn": {}, "compare": None, "hero": None}
+
+    keys = list(yarns) if yarns else list(YARN_PRESETS.keys())
+    if seed is None:
+        seed = int(time.time() * 1000) % (2 ** 31)
+
+    try:
+        from pattern_i18n import yarn_label
+    except Exception:
+        yarn_label = lambda k: k  # noqa: E731
+
+    print(f"[image] rendering {len(keys)} yarn variants at seed {seed}...")
+    paths = {}
+    for key in keys:
+        prompt = build_product_prompt(pattern_data, title, yarn=key)
+        path = os.path.join(out_dir, f"{prefix}_{key}.png")
+        if generate(prompt, path, seed=seed):
+            paths[key] = path
+
+    if not paths:
+        return {"by_yarn": {}, "compare": None, "hero": None}
+
+    labels = {k: yarn_label(k) for k in paths}
+    compare = _montage(paths, os.path.join(out_dir, f"{prefix}_yarn_compare.png"),
+                       labels) if len(paths) > 1 else None
+
+    hero_key = selected if selected in paths else None
+    if hero_key is None:
+        hero_key = DEFAULT_YARN if DEFAULT_YARN in paths else next(iter(paths))
+
+    return {"by_yarn": paths, "compare": compare, "hero": paths[hero_key]}
+
+
 if __name__ == "__main__":
     import sys
 

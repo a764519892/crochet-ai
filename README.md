@@ -107,6 +107,13 @@ The chosen yarn is written into the PDF materials section *and* added to the ima
 prompt, so a "4-ply milk cotton" pattern is previewed with fine, tight stitches
 rather than chunky ones.
 
+**The PDF shows all four thicknesses.** Every generate call renders the same
+pattern once per yarn preset (same seed, so the only difference is the yarn) and
+embeds the resulting strip on page 1, under the finished-product image, captioned
+so the reader can compare and pick a yarn. The web UI shows it under the preview
+image too. This means one generate = four renders (~10 s each); set
+`CROCHET_NO_IMAGE=1` to skip image generation entirely.
+
 Start ComfyUI (the portable build works well), then run the app normally:
 
 ```bash

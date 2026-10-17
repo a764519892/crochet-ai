@@ -157,6 +157,20 @@ POSITIONS = {
     "body": "身体", "head": "头部", "face": "脸部", "top of head.": "头顶",
 }
 
+# Short labels for the finished-product comparison strip, keyed by the
+# pattern_engine.YARN_PRESETS key.
+YARN_LABELS = {
+    "milk_cotton": "4股牛奶棉 · 2.0-2.5mm",
+    "sport": "细线 Sport/DK · 2.5-3.0mm",
+    "worsted": "中粗线 Worsted #4 · 3.5mm",
+    "bulky": "粗线 Bulky #5 · 4.0-5.0mm",
+}
+
+
+def yarn_label(key):
+    """Chinese label for a yarn preset key (falls back to the key itself)."""
+    return YARN_LABELS.get(key, str(key))
+
 # ──────────────────────────────────────────────────────────────
 #  Instruction translation
 # ──────────────────────────────────────────────────────────────

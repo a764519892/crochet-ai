@@ -94,22 +94,23 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
         print("        Try a simpler image or clearer notes.")
         raise SystemExit(1)
 
-    # ── Step 3: Render a finished-product preview image (local ComfyUI) ──
+    # ── Step 3: Render finished-product images (one per yarn thickness) ──
     image_path_out = None
+    compare_path_out = None
     if os.environ.get("CROCHET_NO_IMAGE"):
         print("\n[3/4] Skipping preview image (CROCHET_NO_IMAGE set).")
     else:
-        print("\n[3/4] Rendering finished-product preview image (ComfyUI)...")
+        print("\n[3/4] Rendering finished-product images (one per yarn thickness)...")
         try:
             import image_generator
             if image_generator.available():
-                prompt = image_generator.build_product_prompt(
-                    pattern_data, creature_type,
-                    yarn=os.environ.get("CROCHET_YARN"))
-                print(f"      prompt: {prompt[:120]}...")
-                image_path_out = f"{output_name}_preview.png"
-                if not image_generator.generate(prompt, image_path_out):
-                    image_path_out = None
+                res = image_generator.render_yarn_variants(
+                    pattern_data, creature_type, out_dir=".",
+                    prefix=f"{output_name}_preview",
+                    selected=os.environ.get("CROCHET_YARN"))
+                image_path_out = res.get("hero")
+                compare_path_out = res.get("compare")
+                if not image_path_out:
                     print("      (image generation failed; continuing without it)")
             else:
                 print("      ComfyUI not reachable at "
@@ -117,11 +118,13 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
         except Exception as exc:
             print(f"      image generator unavailable ({exc}); continuing without an image.")
             image_path_out = None
+            compare_path_out = None
 
     # ── Step 4: Save to PDF ──
     print("\n[4/4] Generating PDF...")
     pdf_filename = f"{output_name}_Pattern.pdf"
-    engine.save_to_pdf(pdf_filename, full_pattern, image_path=image_path_out)
+    engine.save_to_pdf(pdf_filename, full_pattern, image_path=image_path_out,
+                       compare_image_path=compare_path_out)
 
     pdf_path = Path(pdf_filename).resolve()
     print("\n" + "=" * 60)

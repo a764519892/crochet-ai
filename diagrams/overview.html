@@ -139,7 +139,7 @@
           <div class="chip"><b>LoRA 钩针风格</b><span>WorldOfCrochet · 权重 0.35（淡淡的）</span></div>
           <div class="chip"><b>毛线粗细</b><span>4 股牛奶棉 · 2.0–2.5mm 钩针</span></div>
           <div class="chip"><b>ComfyUI API</b><span>127.0.0.1:8188（--lowvram）</span></div>
-          <div class="chip"><b>嵌入 PDF</b><span>成品效果图放在图解开头</span></div>
+          <div class="chip"><b>嵌入 PDF</b><span>成品图 + 粗细对比放在首页</span></div>
         </div>
       </div>
       <div class="layer">
@@ -269,7 +269,7 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
       <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
       <div style="font-size:13px;">
         <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 + <b>你选的毛线粗细（4 股牛奶棉 · 2.0–2.5mm）</b> → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA（0.35）</b> 文生图 → 得到成品效果图。</p>
-        <p style="margin-bottom:8px;">它和中文图解一起，<b>嵌入 PDF 首页</b>，方便照图确认成品样子。</p>
+        <p style="margin-bottom:8px;">成品图 + <b>四档毛线粗细的对比图</b>，都<b>嵌进 PDF 首页</b>——买线的人可以直接对比着挑一种线，照着钩。</p>
         <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；毛线粗细在图解页「Yarn / hook」下拉里选，会同时写进 PDF 材料和图片提示词；LoRA 自动识别（文件名含 crochet/amigurumi/knit 等即启用），强度用 <code>COMFY_LORA_STRENGTH</code> 调（现为 0.35），<code>COMFY_LORA=none</code> 可关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
       </div>
     </div>
@@ -277,7 +277,7 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
       <img src="yarn-compare.png" alt="毛线粗细对比" style="width:100%; border-radius:10px;">
       <figcaption style="font-size:12.5px; color:#6b625b; margin-top:10px; line-height:1.65;">
         <b>毛线粗细可调 · 同一种子、同一 LoRA 强度（0.35），只换毛线</b><br>
-        从左到右：4 股牛奶棉（细密小针）→ 细线 Sport/DK → 中粗线 Worsted → 粗线 Bulky（大而松的针）。这正是真实钩织的规律——<b>线越粗、钩针越大，成品越大、针迹越粗</b>。在图解页第 04 步「Yarn / hook」下拉里选，图片与 PDF 材料段会一起变。
+        从左到右：4 股牛奶棉（细密小针）→ 细线 Sport/DK → 中粗线 Worsted → 粗线 Bulky（大而松的针）。这正是真实钩织的规律——<b>线越粗、钩针越大，成品越大、针迹越粗</b>。这一整条对比图会<b>自动放进每份 PDF 的首页</b>，供买线的人对比选线；网页上也能直接看到。
       </figcaption>
     </figure>
   </section>

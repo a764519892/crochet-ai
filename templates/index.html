@@ -380,7 +380,10 @@
                 const imgHtml = data.image_url
                     ? `<div class="preview-image-wrap"><img src="${data.image_url}" alt="成品效果图"><div class="preview-image-cap">成品效果图（AI 生成）</div></div>`
                     : '';
-                previewArea.innerHTML = `<div class="preview-content">${imgHtml}${data.preview}</div>`;
+                const cmpHtml = data.compare_url
+                    ? `<div class="preview-image-wrap"><img src="${data.compare_url}" alt="不同毛线粗细对比"><div class="preview-image-cap">不同毛线粗细的效果对比 · 可据此选线（已放进 PDF）</div></div>`
+                    : '';
+                previewArea.innerHTML = `<div class="preview-content">${imgHtml}${cmpHtml}${data.preview}</div>`;
                 currentPdfUrl = data.pdf_url;
                 downloadBtn.style.display = 'block';
                 showSuccess(data.image_url ? 'Pattern ready (with preview image).' : 'Pattern ready.');

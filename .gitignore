@@ -8,6 +8,6 @@ __pycache__/
 uploads/
 generated_patterns/
 # generated finished-product previews (the poster's diagrams/preview.png is tracked)
-*_preview.png
+*_preview*.png
 .idea/
 .vscode/

@@ -1,4 +1,5 @@
 import os
+import re
 
 from fpdf import FPDF
 
@@ -109,11 +110,12 @@ class BeginnerPatternGenerator:
     #  PDF OUTPUT
     # ──────────────────────────────────────────────
 
-    def save_to_pdf(self, filename, content, image_path=None):
+    def save_to_pdf(self, filename, content, image_path=None, compare_image_path=None):
         """Saves the pattern content to a PDF file.
 
-        If image_path is given and readable, the image is embedded under the
-        title as a "finished product" preview.
+        image_path          - finished-product preview, embedded under the title.
+        compare_image_path  - wide strip showing the same product at several yarn
+                              thicknesses, so the reader can pick a yarn.
         """
         print(f"Generating PDF: {filename}...")
 
@@ -134,6 +136,15 @@ class BeginnerPatternGenerator:
                       "Set the CROCHET_CJK_FONT environment variable to a .ttf/.ttc file.")
 
         image_done = not (image_path and os.path.exists(image_path))
+        compare_done = not (compare_image_path and os.path.exists(compare_image_path))
+
+        def _space(mm):
+            """Start a new page if `mm` of height would not fit below the cursor."""
+            try:
+                if pdf.get_y() + mm > pdf.h - pdf.b_margin:
+                    pdf.add_page()
+            except Exception:
+                pass
 
         for clean_line in content.split("\n"):
             clean_line = clean_line.strip()
@@ -150,6 +161,7 @@ class BeginnerPatternGenerator:
                 if not image_done:
                     try:
                         img_w = 100
+                        _space(img_w * 1.35 + 16)
                         pdf.image(image_path, x=(pdf.w - img_w) / 2, w=img_w)
                         pdf.ln(3)
                         pdf.set_font(family, "", 9)
@@ -158,6 +170,22 @@ class BeginnerPatternGenerator:
                         image_done = True
                     except Exception as exc:  # pragma: no cover - defensive
                         print(f"[Warning] could not embed image: {exc}")
+                if not compare_done:
+                    try:
+                        pdf.set_font(family, "B", 10)
+                        _space(82)
+                        pdf.write(6, "不同毛线粗细的效果对比（可据此选择你要买的线）")
+                        pdf.ln(7)
+                        cmp_w = 176
+                        pdf.image(compare_image_path, x=(pdf.w - cmp_w) / 2, w=cmp_w)
+                        pdf.ln(3)
+                        pdf.set_font(family, "", 8)
+                        pdf.write(4, "以上四张为同一个玩偶、同一种子渲染，仅毛线粗细不同："
+                                     "线越粗、钩针越大，成品越大、针迹越粗。")
+                        pdf.ln(10)
+                        compare_done = True
+                    except Exception as exc:  # pragma: no cover - defensive
+                        print(f"[Warning] could not embed comparison image: {exc}")
             elif clean_line.startswith("## "):
                 pdf.set_font(family, "B", 14)
                 pdf.ln(4)
@@ -172,8 +200,18 @@ class BeginnerPatternGenerator:
                 pdf.write(5, clean_line.replace("**", ""))
                 pdf.ln(5)
             elif clean_line.startswith("- "):
-                pdf.set_font(family, "", 9)
-                pdf.write(5, clean_line)
+                # Render "- **label:** rest" with a real bold label instead of
+                # printing the literal markdown asterisks.
+                body = clean_line[2:]
+                match = re.match(r"\*\*(.+?)\*\*(.*)", body, flags=re.S)
+                if match:
+                    pdf.set_font(family, "B", 9)
+                    pdf.write(5, "- " + match.group(1))
+                    pdf.set_font(family, "", 9)
+                    pdf.write(5, match.group(2))
+                else:
+                    pdf.set_font(family, "", 9)
+                    pdf.write(5, clean_line)
                 pdf.ln(5)
             elif clean_line == "---":
                 pdf.ln(3)
