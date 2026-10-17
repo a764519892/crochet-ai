@@ -43,14 +43,14 @@ VAE_NAME = os.environ.get("COMFY_VAE", "ae.safetensors")
 # LoRA (SD backend only): "" = auto-pick a crochet-ish lora if one is installed,
 # "none"/"off"/"0" = never use one, anything else = that exact file name.
 COMFY_LORA = os.environ.get("COMFY_LORA", "")
-COMFY_LORA_STRENGTH = float(os.environ.get("COMFY_LORA_STRENGTH", "0.8"))
+COMFY_LORA_STRENGTH = float(os.environ.get("COMFY_LORA_STRENGTH", "0.35"))
 LORA_HINTS = ("crochet", "amigurumi", "amigurami", "knit", "knitted", "yarn", "wool")
 
 # ---- prompts ---------------------------------------------------------------
 # Shared look-and-feel of the subject.
 SUBJECT_STYLE = (
     "handmade crochet amigurumi toy made of yarn, "
-    "soft wool yarn texture, visible single crochet stitches, "
+    "soft fine yarn texture, neat even crochet stitches, "
     "cute kawaii design, standing on a plain light grey surface"
 )
 
@@ -160,8 +160,25 @@ def pick_lora():
     return None
 
 
-def build_product_prompt(pattern_data, title="amigurumi"):
-    """Turn the analysed pattern into a concrete image prompt."""
+def yarn_phrase(key=None):
+    """The yarn/hook description from pattern_engine's active preset.
+
+    Kept here (rather than duplicating the hook sizes) so the image and the
+    written materials section always describe the same yarn.
+    """
+    try:
+        from pattern_engine import active_yarn
+        return active_yarn(key).get("image", "")
+    except Exception:
+        return ""
+
+
+def build_product_prompt(pattern_data, title="amigurumi", yarn=None):
+    """Turn the analysed pattern into a concrete image prompt.
+
+    `yarn` is a pattern_engine YARN_PRESETS key (None = the configured default),
+    which pins the yarn thickness the render should show.
+    """
     names, colors = [], []
     for p in pattern_data or []:
         if not isinstance(p, dict):
@@ -182,6 +199,9 @@ def build_product_prompt(pattern_data, title="amigurumi"):
         prompt += f", colors: {col}"
     if parts:
         prompt += f" (parts: {parts})"
+    phrase = yarn_phrase(yarn)
+    if phrase:
+        prompt += f", {phrase}"
     return f"{prompt}. {SD_STYLE}"
 
 
@@ -191,7 +211,7 @@ def build_product_prompt(pattern_data, title="amigurumi"):
 def build_sd_workflow(prompt, negative, ckpt_name, width=512, height=640,
                       steps=25, cfg=7.0, seed=None,
                       sampler="dpmpp_2m", scheduler="karras",
-                      lora=None, lora_strength=0.8):
+                      lora=None, lora_strength=0.35):
     """Standard Stable Diffusion txt2img (SD 1.5 / SD 2.x / SDXL checkpoints).
 
     When `lora` is given, a LoraLoader is inserted between the checkpoint and

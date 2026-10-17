@@ -30,9 +30,13 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 
-def build_pattern_text(engine, pattern_data, title, lang=None):
+def build_pattern_text(engine, pattern_data, title, lang=None, yarn=None):
     """Assemble the full pattern document the same way the web app does."""
-    return engine.build_document(pattern_data, title, lang=lang or os.environ.get("CROCHET_LANG", "zh"))
+    return engine.build_document(
+        pattern_data, title,
+        lang=lang or os.environ.get("CROCHET_LANG", "zh"),
+        yarn=yarn or os.environ.get("CROCHET_YARN"),
+    )
 
 
 def generate_pattern_from_image(image_path, output_name=None, notes=None):
@@ -99,7 +103,9 @@ def generate_pattern_from_image(image_path, output_name=None, notes=None):
         try:
             import image_generator
             if image_generator.available():
-                prompt = image_generator.build_product_prompt(pattern_data, creature_type)
+                prompt = image_generator.build_product_prompt(
+                    pattern_data, creature_type,
+                    yarn=os.environ.get("CROCHET_YARN"))
                 print(f"      prompt: {prompt[:120]}...")
                 image_path_out = f"{output_name}_preview.png"
                 if not image_generator.generate(prompt, image_path_out):

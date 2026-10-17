@@ -89,7 +89,23 @@ For the `sd` backend a **LoRA** makes the render look like real crochet. Drop an
 SD 1.5 amigurumi/crochet LoRA into `models/loras` and it is picked up automatically
 (the file name is matched against crochet/amigurumi/knit/yarn/wool). For example
 `WorldOfCrochet.safetensors`; set `COMFY_LORA=none` to turn it off or
-`COMFY_LORA=<file>` to force one.
+`COMFY_LORA=<file>` to force one. `COMFY_LORA_STRENGTH` (default `0.35`) sets how
+strong the crochet texture is — lower is subtler.
+
+**Yarn thickness** is a single setting shared by the written pattern and the image,
+so the two always agree. Pick it in the web UI (*Yarn / hook*), or with the
+`CROCHET_YARN` environment variable / the `yarn` request field:
+
+| Key | Yarn | Hook |
+| --- | --- | --- |
+| `milk_cotton` (default) | 4-ply milk cotton (fine) | 2.0–2.5 mm |
+| `sport` | Sport / DK (Fine #2-3) | 2.5–3.0 mm |
+| `worsted` | Worsted (Medium #4) | 3.5 mm (E/4) |
+| `bulky` | Bulky (Chunky #5) | 4.0–5.0 mm |
+
+The chosen yarn is written into the PDF materials section *and* added to the image
+prompt, so a "4-ply milk cotton" pattern is previewed with fine, tight stitches
+rather than chunky ones.
 
 Start ComfyUI (the portable build works well), then run the app normally:
 
@@ -105,7 +121,8 @@ Relevant settings (all optional, environment variables):
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUI server |
 | `COMFY_CKPT` | first checkpoint found | force a specific checkpoint file |
 | `COMFY_LORA` | auto (first crochet-ish file) | LoRA file name; `none` disables it |
-| `COMFY_LORA_STRENGTH` | `0.8` | LoRA weight |
+| `COMFY_LORA_STRENGTH` | `0.35` | LoRA weight (lower = subtler crochet texture) |
+| `CROCHET_YARN` | `milk_cotton` | yarn/hook preset (see the table above) |
 | `COMFY_SIZE` | `512x640` (`sd`) / `768` (`flux`) | render size; lower = less memory |
 | `COMFY_UNET` / `COMFY_CLIP_T5` / `COMFY_CLIP_L` / `COMFY_VAE` | FLUX dev fp8 names | FLUX model files |
 | `CROCHET_NO_IMAGE` | unset | set to `1` to skip image generation entirely |

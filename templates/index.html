@@ -16,6 +16,8 @@
         .preview-image-wrap img { max-width: 100%; border-radius: 10px;
             box-shadow: 0 6px 24px rgba(0,0,0,.12); }
         .preview-image-cap { font-size: 12px; color: #888; margin-top: 6px; }
+        .settings select { width: 100%; padding: 10px 12px; font: inherit; font-size: 14px;
+            color: #2f2a26; background: #fff; border: 1px solid #e2d9cf; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -68,6 +70,15 @@
                             <div class="setting-item">
                                 <label for="patternName">Pattern name</label>
                                 <input type="text" id="patternName" value="My_Custom_Pattern">
+                            </div>
+                            <div class="setting-item">
+                                <label for="yarnSelect">Yarn / hook（毛线粗细）</label>
+                                <select id="yarnSelect">
+                                    <option value="milk_cotton" selected>4股牛奶棉 · 2.0–2.5mm</option>
+                                    <option value="sport">细线 Sport/DK #3 · 2.5–3.0mm</option>
+                                    <option value="worsted">中粗线 Worsted #4 · 3.5mm</option>
+                                    <option value="bulky">粗线 Bulky #5 · 4.0–5.0mm</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -354,6 +365,7 @@
                         name: patternName,
                         creature_type: currentCreatureType,
                         generate_image: wantsImage,
+                        yarn: document.getElementById('yarnSelect').value,
                     }),
                 });
 

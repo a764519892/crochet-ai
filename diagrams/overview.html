@@ -89,7 +89,7 @@
 
   <div class="kicker">本机 AI · 不联网 · 输出 PDF + 成品效果图</div>
   <h1>🧶 Crochet AI — 项目运行图解</h1>
-  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（中文术语 + 圈数 + 针数 + 组装说明），导出 PDF；并用本机 ComfyUI（SD 1.5 模型 + 钩针风格 LoRA）额外渲染一张<b>成品效果图</b>，一并放进 PDF。全程在本机运行，不调用任何云端 API。</p>
+  <p class="lede">把一张 amigurumi（毛线玩偶）照片，或一句文字描述，变成一份新手可照做的钩针图解（中文术语 + 圈数 + 针数 + 组装说明），导出 PDF；并用本机 ComfyUI（SD 1.5 模型 + 钩针风格 LoRA，按你设置的毛线粗细）额外渲染一张<b>成品效果图</b>，一并放进 PDF。全程在本机运行，不调用任何云端 API。</p>
 
   <div class="flow-line">
     <span class="node">照片 / 文字</span><span class="arrow">→</span>
@@ -136,7 +136,8 @@
         <div class="body">
           <div class="chip"><b>image_generator.py</b><span>生成成品效果图</span></div>
           <div class="chip"><b>SD 1.5 模型</b><span>本机 ComfyUI 文生图（自动识别）</span></div>
-          <div class="chip"><b>LoRA 钩针风格</b><span>WorldOfCrochet · 权重 0.8</span></div>
+          <div class="chip"><b>LoRA 钩针风格</b><span>WorldOfCrochet · 权重 0.35（淡淡的）</span></div>
+          <div class="chip"><b>毛线粗细</b><span>4 股牛奶棉 · 2.0–2.5mm 钩针</span></div>
           <div class="chip"><b>ComfyUI API</b><span>127.0.0.1:8188（--lowvram）</span></div>
           <div class="chip"><b>嵌入 PDF</b><span>成品效果图放在图解开头</span></div>
         </div>
@@ -267,9 +268,9 @@ pip install -r requirements.txt   <span class="c"># fpdf2 / ollama / flask</span
     <div style="display:flex; gap:18px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;">
       <img src="preview.png" alt="成品效果图" style="width:300px; border-radius:12px; box-shadow:0 6px 22px rgba(0,0,0,.14);">
       <div style="font-size:13px;">
-        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA</b> 文生图 → 得到成品效果图。</p>
+        <p style="margin-bottom:8px;"><b>这张图怎么来的：</b>识别出的部件与颜色 + <b>你选的毛线粗细（4 股牛奶棉 · 2.0–2.5mm）</b> → 拼成提示词 → 本机 ComfyUI 用 <b>SD 1.5（DreamShaper 8）+ WorldOfCrochet LoRA（0.35）</b> 文生图 → 得到成品效果图。</p>
         <p style="margin-bottom:8px;">它和中文图解一起，<b>嵌入 PDF 首页</b>，方便照图确认成品样子。</p>
-        <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；LoRA 会自动识别（文件名含 crochet/amigurumi/knit 等即启用），可用 <code>COMFY_LORA=none</code> 关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
+        <p class="note">无任何云端调用；提示词模板见 <code>image_generator.py</code>（SD_STYLE / SD_NEGATIVE）；毛线粗细在图解页「Yarn / hook」下拉里选，会同时写进 PDF 材料和图片提示词；LoRA 自动识别（文件名含 crochet/amigurumi/knit 等即启用），强度用 <code>COMFY_LORA_STRENGTH</code> 调（现为 0.35），<code>COMFY_LORA=none</code> 可关闭。若换成能跑 FLUX 的机器，会自动改用 FLUX。</p>
       </div>
     </div>
   </section>

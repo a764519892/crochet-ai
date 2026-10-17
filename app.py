@@ -89,6 +89,8 @@ def generate():
         pattern_data = data.get('pattern_data', [])
         raw_parts = data.get('raw_parts', [])
         pattern_name = data.get('name', 'Custom_Pattern')
+        # Yarn/hook preset (see pattern_engine.YARN_PRESETS); None = default.
+        yarn = data.get('yarn') or None
 
         # If raw_parts came from the review UI, convert them to engine format
         if raw_parts and not pattern_data:
@@ -101,7 +103,7 @@ def generate():
         # Generate pattern text (Chinese document)
         engine = BeginnerPatternGenerator()
         try:
-            full_pattern = engine.build_document(pattern_data, pattern_name, lang="zh")
+            full_pattern = engine.build_document(pattern_data, pattern_name, lang="zh", yarn=yarn)
         except KeyError as ke:
             print("[GENERATE] Missing key:", ke)
             traceback.print_exc()
@@ -121,7 +123,7 @@ def generate():
                 import image_generator
                 if image_generator.available():
                     prompt = image_generator.build_product_prompt(
-                        pattern_data, creature_type or pattern_name)
+                        pattern_data, creature_type or pattern_name, yarn=yarn)
                     img_name = f"{secure_filename(pattern_name)}_preview.png"
                     image_path = os.path.join('generated_patterns', img_name)
                     print("[GENERATE] image prompt:", prompt)

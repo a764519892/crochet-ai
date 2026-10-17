@@ -16,6 +16,48 @@ CJK_FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 ]
 
+# ──────────────────────────────────────────────────────────────
+#  Yarn / hook presets
+# ──────────────────────────────────────────────────────────────
+# One source of truth for "what yarn is this". It feeds both the pattern text
+# (the materials section) and the finished-product image prompt, so the picture
+# and the instructions describe the same yarn. Choose with CROCHET_YARN=<key>,
+# or per request with yarn=<key>.
+YARN_PRESETS = {
+    "milk_cotton": {
+        "hook": "2.0-2.5mm",
+        "yarn": "4-ply milk cotton (fine weight)",
+        "image": "4-ply milk cotton yarn, worked with a 2.0-2.5 mm hook, "
+                 "fine tight even stitches",
+    },
+    "sport": {
+        "hook": "2.5-3.0mm",
+        "yarn": "Sport / DK weight (Fine #2-3)",
+        "image": "sport/DK weight cotton yarn, worked with a 2.5-3.0 mm hook, "
+                 "fine even stitches",
+    },
+    "worsted": {
+        "hook": "3.5mm (E/4)",
+        "yarn": "Worsted weight (Medium #4)",
+        "image": "worsted weight (medium #4) yarn, worked with a 3.5 mm hook, "
+                 "medium even stitches",
+    },
+    "bulky": {
+        "hook": "4.0-5.0mm",
+        "yarn": "Bulky weight (Chunky #5)",
+        "image": "bulky chunky weight yarn, worked with a 4.5 mm hook, "
+                 "chunky loose stitches",
+    },
+}
+
+# Default yarn. Override with CROCHET_YARN=<one of the keys above>.
+DEFAULT_YARN = os.environ.get("CROCHET_YARN", "milk_cotton")
+
+
+def active_yarn(key=None):
+    """Return the yarn preset in use (unknown keys fall back to worsted)."""
+    return YARN_PRESETS.get(key or DEFAULT_YARN) or YARN_PRESETS["worsted"]
+
 
 class BeginnerPatternGenerator:
     def __init__(self, lang="zh"):
@@ -35,15 +77,16 @@ class BeginnerPatternGenerator:
     #  DOCUMENT ASSEMBLY
     # ──────────────────────────────────────────────
 
-    def build_document(self, pattern_data, title="Custom Pattern", lang=None):
+    def build_document(self, pattern_data, title="Custom Pattern", lang=None, yarn=None):
         """Build the full document (header + materials + parts + assembly).
 
         With lang="zh" the finished English text is localised into Chinese.
+        `yarn` selects a YARN_PRESETS key for the materials section.
         """
         lang = lang or self.lang
         text = self.add_header()
         text += f"## {title.replace('_', ' ')}\n\n"
-        text += self.generate_materials(pattern_data)
+        text += self.generate_materials(pattern_data, yarn=yarn)
         for part in pattern_data:
             text += self.generate_part(part)
         text += self.generate_assembly(pattern_data)
@@ -166,7 +209,7 @@ class BeginnerPatternGenerator:
         header += "\n---\n"
         return header
 
-    def generate_materials(self, pattern_data):
+    def generate_materials(self, pattern_data, yarn=None):
         """Generate a materials/supplies section from the parts list."""
         colors = []
         has_eyes = False
@@ -181,9 +224,10 @@ class BeginnerPatternGenerator:
             if "eye" in name_lower or "head" in name_lower:
                 has_eyes = True
 
+        spec = active_yarn(yarn)
         section = "## MATERIALS\n"
-        section += "- **Hook:** 3.5mm (E/4) crochet hook\n"
-        section += "- **Yarn:** Worsted weight (Medium #4) in the following colors:\n"
+        section += f"- **Hook:** {spec['hook']} crochet hook\n"
+        section += f"- **Yarn:** {spec['yarn']} in the following colors:\n"
         for c in colors:
             section += f"  - {c}\n"
         if has_eyes:

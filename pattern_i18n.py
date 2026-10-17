@@ -35,6 +35,15 @@ BULLETS = {
     "- **Hook:** 3.5mm (E/4) crochet hook": "- **钩针：** 3.5mm（E/4）",
     "- **Yarn:** Worsted weight (Medium #4) in the following colors:":
         "- **毛线：** 中粗线（Worsted／4 号），颜色如下：",
+    "- **Hook:** 2.0-2.5mm crochet hook": "- **钩针：** 2.0–2.5mm",
+    "- **Yarn:** 4-ply milk cotton (fine weight) in the following colors:":
+        "- **毛线：** 4 股牛奶棉（细线），颜色如下：",
+    "- **Hook:** 2.5-3.0mm crochet hook": "- **钩针：** 2.5–3.0mm",
+    "- **Yarn:** Sport / DK weight (Fine #2-3) in the following colors:":
+        "- **毛线：** 细线（Sport／DK，2–3 号），颜色如下：",
+    "- **Hook:** 4.0-5.0mm crochet hook": "- **钩针：** 4.0–5.0mm",
+    "- **Yarn:** Bulky weight (Chunky #5) in the following colors:":
+        "- **毛线：** 粗线（Bulky／5 号），颜色如下：",
     "- **Safety eyes:** 6-9mm (size to your preference)": "- **安全眼睛：** 6–9mm（大小按喜好选）",
     "- **Stuffing:** Polyester fiberfill": "- **填充棉：** 聚酯纤维填充棉",
     "- **Extras:** Yarn needle, stitch markers, scissors": "- **工具：** 毛线缝针、记号扣、剪刀",
